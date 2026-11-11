@@ -1,0 +1,3 @@
+item_id,title,description,url,image_url,availability,price
+MUG-STONE,Stone mug,A heavy ceramic mug. Capacity 350 mL.,https://example.com/products/mug,https://example.com/mug.png,in_stock,18.00 USD
+TOTE-1,Canvas tote,,https://example.com/products/tote,,,
