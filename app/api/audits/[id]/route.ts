@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     audit = await updateAudit(audit.id, (current) => ({
       ...current,
       status: "error",
-      error: { code: "interrupted", message: "体检中断了。可以重试，已抓到的页面会重新抓。" },
+      error: { code: "interrupted", message: "The audit was interrupted. You can retry, and pages that were fetched will be fetched again." },
     }))
   }
   return Response.json(toPublicAudit(audit))

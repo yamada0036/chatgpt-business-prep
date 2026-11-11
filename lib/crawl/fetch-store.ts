@@ -61,7 +61,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
       role: "home",
       status: "not_fetched",
       httpStatus: home.httpStatus,
-      reason: "未抓到：需要登录或被拦截",
+      reason: "Not fetched: sign-in required or blocked",
     })
     return {
       pages,
@@ -91,7 +91,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
     seen.add(key)
     if (timedOut()) {
       partial = true
-      partialReason = "已达到本次抓取时间上限。下面是已完成的部分，可以重试。"
+      partialReason = "The crawl hit its time limit. What finished is below, and you can retry."
       break
     }
     infoCount += 1
@@ -109,7 +109,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
           role,
           status: "not_fetched",
           httpStatus: fetched.httpStatus,
-          reason: "未抓到：需要登录或被拦截",
+          reason: "Not fetched: sign-in required or blocked",
         })
       }
       continue
@@ -131,7 +131,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
     const catalog = await fetchShopifyCatalog(home.url, maxProducts, homeParsed.currency, options, timedOut)
     if (catalog.partial) {
       partial = true
-      partialReason = "已达到本次抓取时间上限。下面是已完成的部分，可以重试。"
+      partialReason = "The crawl hit its time limit. What finished is below, and you can retry."
     }
     if (catalog.page) pages.push(catalog.page)
     if (catalog.products.length) {
@@ -150,7 +150,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
     for (const link of listingLinks) {
       if (timedOut()) {
         partial = true
-        partialReason = "已达到本次抓取时间上限。下面是已完成的部分，可以重试。"
+        partialReason = "The crawl hit its time limit. What finished is below, and you can retry."
         break
       }
       const fetched = await fetchPublic(link.href, requestOptions(options))
@@ -187,7 +187,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
     })
     if (timedOut()) {
       partial = true
-      partialReason = "已达到本次抓取时间上限。下面是已完成的部分，可以重试。"
+      partialReason = "The crawl hit its time limit. What finished is below, and you can retry."
     }
     for (const item of fetchedProducts) {
       if (!item) continue
@@ -202,7 +202,7 @@ export async function crawlStore(startUrl: string, options: CrawlOptions = {}): 
           role: "product",
           status: "not_fetched",
           httpStatus: item.fetched.httpStatus,
-          reason: "未抓到：需要登录或被拦截",
+          reason: "Not fetched: sign-in required or blocked",
         })
         continue
       }
@@ -256,10 +256,10 @@ function fatalFrom(reason: FetchFailure): { code: string; message: string } {
 }
 
 function reasonText(reason: FetchFailure): string {
-  if (reason === "login") return "未抓到：需要登录或被拦截"
-  if (reason === "timeout") return "未抓到：超时"
-  if (reason === "blocked") return "未抓到：被拦截"
-  return "未抓到：打不开"
+  if (reason === "login") return "Not fetched: sign-in required or blocked"
+  if (reason === "timeout") return "Not fetched: timed out"
+  if (reason === "blocked") return "Not fetched: blocked"
+  return "Not fetched: could not open"
 }
 
 function pageRecord(url: string, role: PageRole, reason: FetchFailure, httpStatus?: number): PageRecord {
@@ -380,7 +380,7 @@ async function fetchShopifyCatalog(
         notices.push({
           itemId: "",
           sourceUrl: fetched.url,
-          note: `公开商品列表有 ${payload.products.length} 个商品，本次只处理前 ${sliced.length} 个。`,
+          note: `The public product list has ${payload.products.length} products. This run kept only the first ${sliced.length}.`,
         })
       }
       return {
@@ -524,9 +524,9 @@ function assembleFacts(input: {
   })()
   const conflicts = []
   if (inputHost && finalHost && hostsConflict(inputHost, finalHost)) {
-    conflicts.push({ value: input.startUrl, source: "提交的网址" }, { value: input.finalUrl, source: input.finalUrl })
+    conflicts.push({ value: input.startUrl, source: "submitted URL" }, { value: input.finalUrl, source: input.finalUrl })
   } else if (canonicalHost && inputHost && hostsConflict(inputHost, canonicalHost) && input.home.canonicalUrl) {
-    conflicts.push({ value: input.startUrl, source: "提交的网址" }, { value: input.home.canonicalUrl, source: input.home.canonicalUrl })
+    conflicts.push({ value: input.startUrl, source: "submitted URL" }, { value: input.home.canonicalUrl, source: input.home.canonicalUrl })
   }
   facts.websiteConflicts = conflicts
   return facts

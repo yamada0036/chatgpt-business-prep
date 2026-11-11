@@ -59,8 +59,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
         priority: 1,
         issue: {
           name: field.fieldName,
-          state: "有冲突",
-          impact: "同一资料项有多处原文且不一致。准备包不会挑一个填进去，需要你确认后再提交。",
+          state: "Conflict",
+          impact: "This field has more than one source and they disagree. The prep pack does not pick one. Confirm it before you submit.",
         },
       })
     } else if (field.display === "not_fetched") {
@@ -68,8 +68,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
         priority: 2,
         issue: {
           name: field.fieldName,
-          state: "未抓到",
-          impact: "这次没有抓到对应公开页，不能把该项写成已具备或已缺失。认领资料需要你自己补上后再提交。",
+          state: "Not fetched",
+          impact: "The matching public page was not fetched, so this field is not marked ready or missing. Add it yourself before you submit the claim.",
         },
       })
     } else if (field.display === "missing") {
@@ -77,8 +77,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
         priority: 3,
         issue: {
           name: field.fieldName,
-          state: "缺失",
-          impact: "公开页面上没有看到这项。认领通过后要在 Business Hub 更新资料，空着就无法贴出草稿。",
+          state: "Missing",
+          impact: "This was not seen on the public pages. After a claim is approved you update it in Business Hub. A blank field has no draft to paste.",
         },
       })
     } else if (field.display === "needs_input") {
@@ -86,8 +86,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
         priority: 4,
         issue: {
           name: field.fieldName,
-          state: "需补充",
-          impact: "看到的内容不够写成可提交草稿。需要你补充后才能贴到官方后台。",
+          state: "Needs input",
+          impact: "What was found is not enough for a draft you can submit. Add it before you paste it into the official console.",
         },
       })
     }
@@ -97,8 +97,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
       priority: 3,
       issue: {
         name: "product feed",
-        state: `${summary.missingRows} 行缺少必填字段`,
-        impact: "官方规范里，必填字段为空或无法识别时，该行会被拒绝。这些单元格保持空白，没有用假值填满。",
+        state: `${summary.missingRows} rows are missing required fields`,
+        impact: "Under the official spec, a row is rejected when a required field is empty or unreadable. Those cells stay blank. They were not filled with invented values.",
       },
     })
   }
@@ -107,8 +107,8 @@ export function urgentIssues(profile: ProfileField[], summary: FeedSummary, feed
       priority: 3,
       issue: {
         name: "product feed format",
-        state: `${summary.invalidRows} 行有格式问题`,
-        impact: "价格、链接或库存枚举不符合官方格式的值没有写入可上传单元格。",
+        state: `${summary.invalidRows} rows have a format problem`,
+        impact: "Prices, links, or availability values that do not match the official format were not written into an uploadable cell.",
       },
     })
   }

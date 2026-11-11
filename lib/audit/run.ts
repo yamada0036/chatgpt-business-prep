@@ -19,7 +19,7 @@ export function enqueueAudit(id: string, crawlOptions?: CrawlOptions): void {
       return updateAudit(id, (audit) => ({
         ...audit,
         status: "error",
-        error: { code: "internal", message: "体检没有完成。可以重试。" },
+        error: { code: "internal", message: "The audit did not finish. You can retry." },
         steps: audit.steps.map((step) => (step.state === "active" ? { ...step, state: "failed" } : step)),
       })).then(() => undefined)
     })
@@ -85,7 +85,7 @@ export async function finishFromCrawl(id: string, crawl?: CrawlResult): Promise<
           status: "needs_column_map",
           steps: [
             { key: "fetch", state: "done" },
-            { key: "sheet", state: "active", detail: "需要你把表格列对应到官方字段名，只能映射一次。" },
+            { key: "sheet", state: "active", detail: "Map your sheet columns to the official field names. This can be done once." },
             { key: "check", state: "pending" },
           ],
         }
@@ -104,7 +104,7 @@ export async function finishFromCrawl(id: string, crawl?: CrawlResult): Promise<
       partialReason: source.partialReason,
       steps: [
         { key: "fetch", state: "done" },
-        { key: "sheet", state: sheetState, detail: audit.upload ? audit.upload.filename : "没有上传商品表" },
+        { key: "sheet", state: sheetState, detail: audit.upload ? audit.upload.filename : "No product sheet was uploaded" },
         { key: "check", state: "done" },
       ],
     }

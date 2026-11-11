@@ -17,11 +17,11 @@ function formatCents(cents: number, currency: string): string {
 }
 
 const DISPLAY: Record<string, string> = {
-  ready: "已具备",
-  missing: "缺失",
-  needs_input: "需补充",
-  conflict: "有冲突",
-  not_fetched: "需补充（未抓到）",
+  ready: "Ready",
+  missing: "Missing",
+  needs_input: "Needs input",
+  conflict: "Conflict",
+  not_fetched: "Needs input (not fetched)",
 }
 
 export function AuditView({ id }: { id: string }) {
@@ -36,7 +36,7 @@ export function AuditView({ id }: { id: string }) {
       const data = (await response.json()) as PublicAudit & { error?: { message: string } }
       if (stop) return
       if (!response.ok) {
-        setError(data.error?.message ?? "读不到这次体检。")
+        setError(data.error?.message ?? "This audit could not be loaded.")
         return
       }
       setAudit(data)
@@ -48,23 +48,23 @@ export function AuditView({ id }: { id: string }) {
     }
   }, [id])
 
-  if (error) return <Alert variant="destructive"><AlertTitle>打不开</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
-  if (!audit) return <p className="text-sm text-muted-foreground">正在读取这次体检…</p>
+  if (error) return <Alert variant="destructive"><AlertTitle>Could not open</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+  if (!audit) return <p className="text-sm text-muted-foreground">Loading this audit…</p>
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">免费体检</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Free audit</h1>
         <Disclaimer compact />
       </div>
       <StepList audit={audit} />
-      {audit.status === "running" ? <p className="text-sm text-muted-foreground">只显示已经发生的抓取，不展示编造的中间结果。</p> : null}
+      {audit.status === "running" ? <p className="text-sm text-muted-foreground">Only fetches that already happened are shown. Invented progress is not.</p> : null}
       {audit.status === "error" ? <ErrorState audit={audit} /> : null}
       {audit.status === "partial" ? (
         <Alert>
-          <AlertTitle>只完成了一部分</AlertTitle>
-          <AlertDescription>{audit.partialReason ?? "可以重试。"}</AlertDescription>
+          <AlertTitle>Only part of this finished</AlertTitle>
+          <AlertDescription>{audit.partialReason ?? "You can retry."}</AlertDescription>
         </Alert>
       ) : null}
       {audit.status === "needs_column_map" && audit.columnMap ? (
@@ -77,13 +77,13 @@ export function AuditView({ id }: { id: string }) {
 }
 
 function StepList({ audit }: { audit: PublicAudit }) {
-  const labels: Record<string, string> = { fetch: "抓取页面", sheet: "读取商品表", check: "对照官方字段检查" }
+  const labels: Record<string, string> = { fetch: "Fetch pages", sheet: "Read the product sheet", check: "Check official fields" }
   return (
     <ol className="grid gap-2 sm:grid-cols-3">
       {audit.steps.map((step) => (
         <li key={step.key} className="rounded-xl border border-border bg-card px-3 py-3 text-sm">
           <div className="font-medium">{labels[step.key]}</div>
-          <div className="text-muted-foreground">{step.state === "done" ? "完成" : step.state === "active" ? "进行中" : step.state === "failed" ? "失败" : "等待"}</div>
+          <div className="text-muted-foreground">{step.state === "done" ? "Done" : step.state === "active" ? "In progress" : step.state === "failed" ? "Failed" : "Waiting"}</div>
           {step.detail ? <div className="mt-1 text-muted-foreground">{step.detail}</div> : null}
         </li>
       ))}
@@ -94,12 +94,12 @@ function StepList({ audit }: { audit: PublicAudit }) {
 function ErrorState({ audit }: { audit: PublicAudit }) {
   return (
     <Alert variant="destructive">
-      <AlertTitle>这次体检没有完成</AlertTitle>
+      <AlertTitle>This audit did not finish</AlertTitle>
       <AlertDescription className="space-y-3">
         <p>{audit.error?.message}</p>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" onClick={() => retry(audit.id)}>重试</Button>
-          <Button variant="outline" asChild><Link href="/">更换网址或文件</Link></Button>
+          <Button type="button" onClick={() => retry(audit.id)}>Retry</Button>
+          <Button variant="outline" asChild><Link href="/">Change the URL or file</Link></Button>
         </div>
       </AlertDescription>
     </Alert>
@@ -117,50 +117,50 @@ function Results({ audit }: { audit: PublicAudit }) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>准备度 {audit.score.total}</CardTitle>
+          <CardTitle>Readiness {audit.score.total}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm leading-6">
-          <p>这是本工具的准备度，不是官方分数。范围 0–100。</p>
+          <p>This is this tool&apos;s readiness score, not an official score. Range 0–100.</p>
           <p className="text-muted-foreground">{audit.score.explanation}</p>
-          <p>资料分 {audit.score.profilePercent}{audit.score.feedWeighted ? `，feed 分 ${audit.score.feedPercent}` : "。本次不把 feed 算进总分。"}</p>
+          <p>Profile score {audit.score.profilePercent}{audit.score.feedWeighted ? `, feed score ${audit.score.feedPercent}` : ". The feed is not included in this total."}</p>
         </CardContent>
       </Card>
       <section className="grid gap-3">
-        <h2 className="text-xl font-semibold">最急的 {audit.urgent.length} 个问题</h2>
-        {audit.urgent.length === 0 ? <p className="text-sm text-muted-foreground">六个资料项里没有冲突、缺失或未抓到的项。</p> : null}
+        <h2 className="text-xl font-semibold">{audit.urgent.length} most urgent issues</h2>
+        {audit.urgent.length === 0 ? <p className="text-sm text-muted-foreground">None of the six profile fields conflict, are missing, or were not fetched.</p> : null}
         {audit.urgent.map((issue) => (
           <Card key={issue.name}>
             <CardHeader>
               <CardTitle>{issue.name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p>现状：{issue.state}</p>
+              <p>Status: {issue.state}</p>
               <p className="text-muted-foreground">{issue.impact}</p>
             </CardContent>
           </Card>
         ))}
       </section>
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">资料检查</h2>
+        <h2 className="text-xl font-semibold">Profile check</h2>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Badge>已具备 {audit.profileCounts.ready}</Badge>
-          <Badge variant="secondary">缺失 {audit.profileCounts.missing}</Badge>
-          <Badge variant="outline">需补充 {audit.profileCounts.needs_input}</Badge>
-          <Badge variant="destructive">有冲突 {audit.profileCounts.conflict}</Badge>
+          <Badge>Ready {audit.profileCounts.ready}</Badge>
+          <Badge variant="secondary">Missing {audit.profileCounts.missing}</Badge>
+          <Badge variant="outline">Needs input {audit.profileCounts.needs_input}</Badge>
+          <Badge variant="destructive">Conflict {audit.profileCounts.conflict}</Badge>
         </div>
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left">
               <tr>
-                <th className="p-2">项目</th>
-                <th className="p-2">结果</th>
-                <th className="p-2">摘录</th>
+                <th className="p-2">Field</th>
+                <th className="p-2">Result</th>
+                <th className="p-2">Excerpt</th>
               </tr>
             </thead>
             <tbody>
               {audit.profile.map((field) => (
                 <tr key={field.key} className="border-t border-border align-top">
-                  <td className="p-2 font-medium">{field.fieldName}{field.required ? "" : "（可选）"}</td>
+                  <td className="p-2 font-medium">{field.fieldName}{field.required ? "" : " (optional)"}</td>
                   <td className="p-2">{DISPLAY[field.display] ?? field.display}</td>
                   <td className="p-2 text-muted-foreground">
                     {field.excerpt || "—"}
@@ -171,56 +171,56 @@ function Results({ audit }: { audit: PublicAudit }) {
             </tbody>
           </table>
         </div>
-        <p className="text-sm text-muted-foreground">摘录不是完整资料草稿。完整 `02-profile-draft.md` 只在付费准备包里。</p>
+        <p className="text-sm text-muted-foreground">An excerpt is not the full profile draft. The full `02-profile-draft.md` is only in the paid prep pack.</p>
       </section>
       {audit.includeProductFeed ? (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Feed 摘要</h2>
+          <h2 className="text-xl font-semibold">Feed summary</h2>
           {audit.feedApplicable ? (
             <>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="总行数" value={audit.feedSummary.total} />
-                <Stat label="必填齐全" value={audit.feedSummary.complete} />
-                <Stat label="缺字段" value={audit.feedSummary.missingRows} />
-                <Stat label="格式错误" value={audit.feedSummary.invalidRows} />
+                <Stat label="Rows" value={audit.feedSummary.total} />
+                <Stat label="Required fields filled" value={audit.feedSummary.complete} />
+                <Stat label="Missing fields" value={audit.feedSummary.missingRows} />
+                <Stat label="Invalid format" value={audit.feedSummary.invalidRows} />
               </div>
-              {audit.omittedRowCount > 0 ? <p className="text-sm text-destructive">上传表格有 {audit.omittedRowCount} 行超出上限，没有进入本次结果。</p> : null}
+              {audit.omittedRowCount > 0 ? <p className="text-sm text-destructive">{audit.omittedRowCount} uploaded rows were over the cap and are not in this result.</p> : null}
               {audit.feedReason ? <p className="text-sm text-muted-foreground">{audit.feedReason}</p> : null}
               <div className="space-y-2">
-                <h3 className="font-medium">打码示例（最多两行，不能当完整 CSV）</h3>
-                {audit.sampleRows.length === 0 ? <p className="text-sm text-muted-foreground">没有可展示的商品行。</p> : null}
+                <h3 className="font-medium">Masked sample (at most two rows, not a full CSV)</h3>
+                {audit.sampleRows.length === 0 ? <p className="text-sm text-muted-foreground">No product rows to show.</p> : null}
                 {audit.sampleRows.map((row, index) => (
                   <p key={index} className="text-sm">
-                    {row.titleExcerpt || "（标题为空）"}
+                    {row.titleExcerpt || "(empty title)"}
                     {" · "}
-                    {row.filled.map((item) => `${item.field}:${item.filled ? "有值" : "空"}`).join(" · ")}
+                    {row.filled.map((item) => `${item.field}:${item.filled ? "filled" : "empty"}`).join(" · ")}
                   </p>
                 ))}
               </div>
             </>
           ) : (
-            <p className="text-sm">商品 feed 不适用。{audit.feedReason}</p>
+            <p className="text-sm">The product feed does not apply. {audit.feedReason}</p>
           )}
         </section>
       ) : null}
       <section className="space-y-2 text-sm leading-6">
-        <h2 className="text-xl font-semibold">资格提示</h2>
+        <h2 className="text-xl font-semibold">Eligibility notes</h2>
         <p>{audit.eligibility.agent}</p>
         <p>{audit.eligibility.local}</p>
         <p>{audit.eligibility.market}</p>
       </section>
       <Card>
         <CardHeader>
-          <CardTitle>一次一店准备包</CardTitle>
+          <CardTitle>One-store prep pack</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-6">
-          <p>完整包含 00-readme.md、01-claim-checklist.md、02-profile-draft.md、03-product-feed.csv、03-product-feed-issues.csv{audit.includeAgentPack ? "、04-agent-pack.md" : ""}。未勾选 Agent 时不含 agent 文件。</p>
+          <p>The full pack includes 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off.</p>
           <p>
-            {audit.order.breakdown.priceEnvSet ? "价格来自环境变量。" : "正式价格还没由产品负责人配置，当前按 0 计算，方便走通付费门闩。"}
-            {" "}当前是测试配置，不是已确定的正式售价。基础包 {formatCents(audit.order.breakdown.baseCents, audit.order.breakdown.currency)}，包含 {audit.order.breakdown.includedSkus} 行。
-            本次 {audit.order.breakdown.rowCount} 行，加价 {audit.order.breakdown.overageBlocks} 档，应付 {price}。模拟支付会按同一金额记账。
+            {audit.order.breakdown.priceEnvSet ? "The price comes from environment variables." : "A live price has not been set, so this is calculated as 0 to exercise the payment gate."}
+            {" "}This is a test configuration, not a decided live price. The base pack is {formatCents(audit.order.breakdown.baseCents, audit.order.breakdown.currency)} and includes {audit.order.breakdown.includedSkus} rows.
+            This run has {audit.order.breakdown.rowCount} rows, {audit.order.breakdown.overageBlocks} overage blocks, and {price} due. Simulated payment records that same amount.
           </p>
-          <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>查看应付金额并模拟支付</Link></Button>
+          <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>See the amount due and simulate payment</Link></Button>
         </CardContent>
       </Card>
     </>
@@ -240,11 +240,11 @@ function PageList({ audit }: { audit: PublicAudit }) {
   if (audit.pages.length === 0) return null
   return (
     <section className="space-y-2">
-      <h2 className="text-xl font-semibold">页面</h2>
+      <h2 className="text-xl font-semibold">Pages</h2>
       <ul className="space-y-1 text-sm">
         {audit.pages.map((page) => (
           <li key={`${page.role}-${page.url}`} className="break-all">
-            {page.status === "fetched" ? "已抓到" : "未抓到"} · {page.role} · {page.url}
+            {page.status === "fetched" ? "Fetched" : "Not fetched"} · {page.role} · {page.url}
             {page.reason ? ` · ${page.reason}` : ""}
           </li>
         ))}
@@ -275,7 +275,7 @@ function ColumnMap({
     })
     const data = (await response.json()) as { error?: { message: string } }
     if (!response.ok) {
-      setMessage(data.error?.message ?? "映射没有保存。")
+      setMessage(data.error?.message ?? "The mapping was not saved.")
       return
     }
     window.location.reload()
@@ -283,16 +283,16 @@ function ColumnMap({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>表格列对不上官方字段</CardTitle>
+        <CardTitle>These columns do not match the official fields</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm leading-6">请把你的列名对应到官方英文字段。必填列是 item_id、title、description、url、brand、seller_name、image_url、availability、price。这一步只能做一次。</p>
+        <p className="text-sm leading-6">Map your column names to the official English fields. Required columns are item_id, title, description, url, brand, seller_name, image_url, availability, and price. This step can be done once.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {fields.slice(0, 9).map((field) => (
             <div key={field} className="space-y-1">
               <Label>{field}</Label>
               <Select value={mapping[field] || undefined} onValueChange={(value) => setMapping({ ...mapping, [field]: value })}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="不映射" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Do not map" /></SelectTrigger>
                 <SelectContent>
                   {headers.map((header) => (
                     <SelectItem key={header} value={header}>{header}</SelectItem>
@@ -303,7 +303,7 @@ function ColumnMap({
           ))}
         </div>
         {message ? <p className="text-sm text-destructive">{message}</p> : null}
-        <Button type="button" onClick={submit}>用这次映射重新检查</Button>
+        <Button type="button" onClick={submit}>Check again with this mapping</Button>
       </CardContent>
     </Card>
   )

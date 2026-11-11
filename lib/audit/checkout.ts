@@ -19,11 +19,11 @@ export async function settleOrder(
 ): Promise<AuditRecord> {
   return updateAudit(id, async (audit) => {
     if (audit.status !== "complete" && audit.status !== "partial") {
-      throw new Error("体检还没完成，不能支付。")
+      throw new Error("The audit is not finished, so payment cannot start.")
     }
     const nextEmail = email?.trim() || audit.contactEmail
     if (action === "pay" && !looksLikeEmail(nextEmail)) {
-      throw new Error("付费前需要填写联系邮箱。")
+      throw new Error("A contact email is required before payment.")
     }
     if (action === "fail") {
       return {
@@ -33,7 +33,7 @@ export async function settleOrder(
           ...audit.order,
           status: "failed",
           chargedCents: null,
-          failureReason: "模拟支付失败（测试）。没有扣款，也没有生成准备包。",
+          failureReason: "Simulated payment failed (test). Nothing was charged, and no prep pack was created.",
         },
       }
     }

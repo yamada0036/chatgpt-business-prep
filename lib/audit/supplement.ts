@@ -26,13 +26,13 @@ export function applySupplement(
       const key = update.key.slice("profile:".length)
       const meta = PROFILE_FIELDS.find((field) => field.key === key)
       if (!meta) {
-        rejected.push({ key: update.key, message: "未知资料字段。" })
+        rejected.push({ key: update.key, message: "Unknown profile field." })
         continue
       }
       if (key === "website" || key === "logo" || key === "cover_photo") {
         const absolute = toAbsoluteUrl(value, audit.storeUrl)
         if (!absolute) {
-          rejected.push({ key: update.key, message: "需要一个 http(s) 网址。" })
+          rejected.push({ key: update.key, message: "An http(s) URL is required." })
           continue
         }
         profile = profile.map((field) => (field.key === key ? filledProfile(field, absolute) : field))
@@ -44,14 +44,14 @@ export function applySupplement(
     }
     const match = /^feed:(\d+):([a-z0-9_]+)$/.exec(update.key)
     if (!match || !(FEED_FIELDS as readonly string[]).includes(match[2])) {
-      rejected.push({ key: update.key, message: "未知商品字段。" })
+      rejected.push({ key: update.key, message: "Unknown product field." })
       continue
     }
     const rowIndex = Number(match[1])
     const field = match[2]
     const row = rows.find((item) => item.index === rowIndex)
     if (!row) {
-      rejected.push({ key: update.key, message: "没有这一行。" })
+      rejected.push({ key: update.key, message: "That row does not exist." })
       continue
     }
     row.cells[field] = { value, source: MERCHANT_SOURCE }
@@ -105,7 +105,7 @@ function filledProfile(field: ProfileField, value: string): ProfileField {
     source: MERCHANT_SOURCE,
     suggestedValue: value,
     conflicts: [],
-    note: "商家补充。",
+    note: "Merchant supplement.",
   }
 }
 

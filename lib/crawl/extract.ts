@@ -24,11 +24,11 @@ export type ParsedPage = {
 }
 
 const COUNTRY_PATTERNS: { label: string; re: RegExp }[] = [
-  { label: "美国", re: /\b(united states|u\.s\.a\.|usa)\b|美国/i },
-  { label: "中国", re: /\bchina\b|中国/i },
-  { label: "英国", re: /\bunited kingdom\b|\buk\b|英国/i },
-  { label: "加拿大", re: /\bcanada\b|加拿大/i },
-  { label: "澳大利亚", re: /\baustralia\b|澳大利亚/i },
+  { label: "United States", re: /\b(united states|u\.s\.a\.|usa)\b|美国/i },
+  { label: "China", re: /\bchina\b|中国/i },
+  { label: "United Kingdom", re: /\bunited kingdom\b|\buk\b|英国/i },
+  { label: "Canada", re: /\bcanada\b|加拿大/i },
+  { label: "Australia", re: /\baustralia\b|澳大利亚/i },
 ]
 
 export function parseHtml(html: string, pageUrl: string): ParsedPage {
@@ -374,7 +374,7 @@ export function shopifyCatalogToProducts(
       notices.push({
         itemId: String(product.id ?? ""),
         sourceUrl,
-        note: `该商品还有 ${variants.length - kept.length} 个规格超出本次上限，没有写入。`,
+        note: `This product has ${variants.length - kept.length} more variants than this run's limit. Those were not written.`,
       })
     }
     const multiple = kept.filter((variant) => (variant.title ?? "") !== "Default Title").length > 1 || kept.length > 1

@@ -135,7 +135,7 @@ function supplementTargets(audit: AuditRecord): SupplementTarget[] {
       rowIndex: issue.rowIndex,
       itemId: issue.itemId,
       issueType: issue.issueType,
-      label: issue.itemId ? `${issue.itemId} · ${issue.field}` : `第 ${issue.rowIndex + 1} 行 · ${issue.field}`,
+      label: issue.itemId ? `${issue.itemId} · ${issue.field}` : `Row ${issue.rowIndex + 1} · ${issue.field}`,
       currentValue: issue.currentValue,
       conflicts: [],
     })
