@@ -11,7 +11,7 @@ import { Disclaimer } from "@/components/disclaimer"
 import type { PublicAudit } from "@/lib/public-view"
 import { shanghaiLabel } from "@/lib/time"
 
-const ORDER_LABEL = { pending: "待支付", paid: "已支付", delivered: "已交付", failed: "已失败" } as const
+const ORDER_LABEL = { pending: "Pending payment", paid: "Paid", delivered: "Delivered", failed: "Failed" } as const
 
 export function DeliveryPanel({ id }: { id: string }) {
   const [audit, setAudit] = useState<PublicAudit | null>(null)
@@ -30,13 +30,13 @@ export function DeliveryPanel({ id }: { id: string }) {
     }
   }, [id])
 
-  if (!audit) return <p className="text-sm text-muted-foreground">正在打开交付页…</p>
+  if (!audit) return <p className="text-sm text-muted-foreground">Opening the delivery page…</p>
   if (!audit.paid) {
     return (
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold">交付页还锁着</h1>
-        <p className="text-sm">支付成功后才能下载完整准备包。</p>
-        <Button asChild><Link href={`/audit/${id}/checkout`}>去支付</Link></Button>
+        <h1 className="text-3xl font-semibold">Delivery is still locked</h1>
+        <p className="text-sm">The full prep pack downloads only after payment succeeds.</p>
+        <Button asChild><Link href={`/audit/${id}/checkout`}>Go to payment</Link></Button>
       </div>
     )
   }
@@ -54,10 +54,10 @@ export function DeliveryPanel({ id }: { id: string }) {
     })
     const data = (await response.json()) as PublicAudit & { error?: { message: string }; rejected?: { message: string }[] }
     if (!response.ok) {
-      setMessage(data.error?.message ?? "没有生成新版本。")
+      setMessage(data.error?.message ?? "A new version was not created.")
       return
     }
-    setMessage(data.rejected?.length ? data.rejected.map((item) => item.message).join(" ") : "已生成新版本，旧版本仍可下载。")
+    setMessage(data.rejected?.length ? data.rejected.map((item) => item.message).join(" ") : "A new version was created. Older versions can still be downloaded.")
     setValues({})
     setAudit(data)
   }
@@ -65,29 +65,29 @@ export function DeliveryPanel({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">准备包</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Prep pack</h1>
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
-        <p className="text-sm">订单状态：{ORDER_LABEL[audit.order.status]}。抓取结果和准备包保留 {audit.retentionDays} 天，到 {audit.expiresAt} 删除，不永久保存。</p>
+        <p className="text-sm">Order status: {ORDER_LABEL[audit.order.status]}. The crawl and the prep pack are kept for {audit.retentionDays} days, deleted at {audit.expiresAt}, and are not stored forever.</p>
         <Disclaimer compact />
       </div>
       {audit.incompleteRowCount > 0 ? (
         <Alert variant="destructive">
-          <AlertTitle>有 {audit.incompleteRowCount} 行仍缺少必填字段</AlertTitle>
-          <AlertDescription>这些行如果直接上传，可能被官方拒绝。空单元格没有用假值填上。</AlertDescription>
+          <AlertTitle>{audit.incompleteRowCount} rows still lack required fields</AlertTitle>
+          <AlertDescription>Those rows may be rejected if you upload them as they are. Empty cells were not filled with invented values.</AlertDescription>
         </Alert>
       ) : null}
       <section className="space-y-3">
         {audit.versions.map((version) => (
           <Card key={version.version}>
             <CardHeader>
-              <CardTitle>版本 {version.version}</CardTitle>
+              <CardTitle>Version {version.version}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p>生成时间：{shanghaiLabel(new Date(version.createdAt))}</p>
-              <p>店铺：{audit.storeUrl}</p>
-              <p>文件名：{version.zipName}</p>
+              <p>Generated: {shanghaiLabel(new Date(version.createdAt))}</p>
+              <p>Store: {audit.storeUrl}</p>
+              <p>File name: {version.zipName}</p>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button asChild><a href={`/api/audits/${id}/download?version=${version.version}`}>下载整包 ZIP</a></Button>
+                <Button asChild><a href={`/api/audits/${id}/download?version=${version.version}`}>Download the ZIP</a></Button>
                 {version.files.map((file) => (
                   <Button key={file} variant="outline" asChild>
                     <a href={`/api/audits/${id}/download?version=${version.version}&file=${file}`}>{file}</a>
@@ -97,17 +97,17 @@ export function DeliveryPanel({ id }: { id: string }) {
             </CardContent>
           </Card>
         ))}
-        {latest ? null : <p className="text-sm">还没有生成文件。</p>}
+        {latest ? null : <p className="text-sm">No files have been generated yet.</p>}
       </section>
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">补充缺失字段后再生成</h2>
-        <p className="text-sm text-muted-foreground">只列出待补充、缺失、冲突或格式无效的字段。提交后生成新版本，旧包仍可下载。</p>
-        {audit.supplements.length === 0 ? <p className="text-sm">没有需要补充的字段。</p> : null}
+        <h2 className="text-xl font-semibold">Fill missing fields and generate again</h2>
+        <p className="text-sm text-muted-foreground">Only fields that need input, are missing, conflict, or are invalid are listed. Submitting creates a new version. Older packs stay downloadable.</p>
+        {audit.supplements.length === 0 ? <p className="text-sm">No fields need a supplement.</p> : null}
         <div className="grid gap-4">
           {audit.supplements.map((item) => (
             <div key={item.key} className="space-y-1">
               <Label htmlFor={item.key}>{item.label} · {item.issueType}</Label>
-              {item.currentValue ? <p className="text-xs break-all text-muted-foreground">当前：{item.currentValue.slice(0, 240)}</p> : null}
+              {item.currentValue ? <p className="text-xs break-all text-muted-foreground">Current: {item.currentValue.slice(0, 240)}</p> : null}
               <Input
                 id={item.key}
                 value={values[item.key] ?? ""}
@@ -117,7 +117,7 @@ export function DeliveryPanel({ id }: { id: string }) {
           ))}
         </div>
         {message ? <p className="text-sm">{message}</p> : null}
-        {audit.supplements.length > 0 ? <Button onClick={supplement}>生成新版本</Button> : null}
+        {audit.supplements.length > 0 ? <Button onClick={supplement}>Generate a new version</Button> : null}
       </section>
     </div>
   )

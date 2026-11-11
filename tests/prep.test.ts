@@ -139,14 +139,14 @@ describe("feed rules", () => {
     ])
     expect(rows[0].cells.title.value).toBe(title)
     expect(rows[0].cells.description.value).toBe(description)
-    expect(issues.some((issue) => issue.field === "title" && issue.issueType === "invalid" && issue.note.includes("没有静默截断"))).toBe(true)
+    expect(issues.some((issue) => issue.field === "title" && issue.issueType === "invalid" && issue.note.includes("did not silently truncate"))).toBe(true)
     expect(issues.some((issue) => issue.field === "description" && issue.issueType === "invalid")).toBe(true)
     expect(issues.some((issue) => issue.issueType === "truncated")).toBe(false)
   })
 
   it("does not overwrite a conflicting price", () => {
     const merged = mergeProducts(
-      [raw({ item_id: "MUG-1", title: "Stone mug", price: "10.00 USD", url: "https://shop.example/mug" }, "商家上传表格")],
+      [raw({ item_id: "MUG-1", title: "Stone mug", price: "10.00 USD", url: "https://shop.example/mug" }, "uploaded spreadsheet")],
       [raw({ item_id: "MUG-1", title: "Stone mug", price: "12.00 USD", url: "https://shop.example/mug" })],
     )
     const { rows, issues } = finalizeProducts(merged)
@@ -178,7 +178,7 @@ describe("feed rules", () => {
     const { rows, issues } = finalizeProducts([product])
     expect(rows).toHaveLength(1)
     expect(rows[0].cells.group_id).toBeUndefined()
-    expect(issues.some((issue) => issue.note.includes("未处理变体"))).toBe(true)
+    expect(issues.some((issue) => issue.note.includes("not split"))).toBe(true)
   })
 })
 
@@ -204,7 +204,7 @@ describe("fixtures", () => {
     const crawl = await crawlStore("http://127.0.0.1/fixtures/login", { fetchImpl })
     expect(crawl.fatal?.code).toBe("login")
     expect(crawl.pages.every((page) => page.status === "not_fetched")).toBe(true)
-    expect(JSON.stringify(crawl.pages)).toContain("未抓到")
+    expect(JSON.stringify(crawl.pages)).toContain("Not fetched")
     expect(JSON.stringify(crawl)).not.toContain("不存在")
   })
 
@@ -227,14 +227,14 @@ describe("fixtures", () => {
     expect(rows.find((row) => row.cells.item_id?.value === "TRAIL-BLK-11")?.cells.sale_price?.value).toBe("59.99 USD")
     expect(rows.map((row) => row.cells.availability?.value).sort()).toEqual(["in_stock", "out_of_stock"])
     expect(rows.find((row) => row.cells.item_id?.value === "TRAIL-BLK-10")?.cells.gtin?.value).toBe("09506000134352")
-    expect(issues.some((issue) => issue.note.includes("未处理变体"))).toBe(false)
+    expect(issues.some((issue) => issue.note.includes("not split"))).toBe(false)
   })
 
   it("does not pretend an option menu is a split", async () => {
     const crawl = await crawlStore("http://127.0.0.1/fixtures/options", { fetchImpl })
     const { rows, issues } = finalizeProducts(crawl.products)
     expect(rows).toHaveLength(1)
-    expect(issues.some((issue) => issue.note.includes("未处理变体"))).toBe(true)
+    expect(issues.some((issue) => issue.note.includes("not split"))).toBe(true)
   })
 })
 
@@ -313,7 +313,7 @@ describe("pack and payment gate", () => {
       feedApplicable: true,
       feedReason: "",
       urgent: [],
-      eligibility: { agent: "无法判断", local: "本地店和餐馆目前只能认领已有的美国 listing。", market: "官方标准格式上传目前默认面向美国市场。" },
+      eligibility: { agent: "Cannot tell", local: "Local shops and restaurants can currently claim only an existing United States listing.", market: "The official standard file upload is currently aimed at the United States market by default." },
       score: emptyScore(),
       order: {
         status: "pending",
@@ -421,8 +421,8 @@ describe("pack and payment gate", () => {
     expect(readme.startsWith("\uFEFF")).toBe(false)
     expect(feed.charCodeAt(0)).toBe(0xfeff)
     expect(readme).toContain(DISCLAIMER_SHORT)
-    expect(readme).toContain("不代认领")
-    expect(readme).toContain("不保证推荐")
+    expect(readme).toContain("does not claim")
+    expect(readme).toContain("does not promise a recommendation")
     expect(profile).toContain("field_name:")
     expect(profile).toContain("status:")
     const table = parseCsv(feed)
@@ -435,18 +435,18 @@ describe("pack and payment gate", () => {
     expect(agent.startsWith("# Business agent draft")).toBe(true)
     expect(agent.indexOf(AGENT_WARNING_ELIGIBILITY)).toBeLessThan(400)
     expect(agent).toContain(AGENT_WARNING_ACTIONS)
-    expect(agent).toContain("不能代为下单、预约或查询顾客订单")
+    expect(agent).toContain("cannot place orders, make bookings, or look up a customer's order")
     const withoutAgent = audit({ includeAgentPack: false, id: randomUUID() })
     const files = renderPack(withoutAgent, 1, new Date())
     expect(files["04-agent-pack.md"]).toBeUndefined()
 
     const supplemented = applySupplement(first, [{ key: "profile:return_policy", value: "https://harbor.example/returns" }])
     expect(supplemented.applied).toBe(1)
-    expect(supplemented.audit.profile.find((field) => field.key === "return_policy")?.source).toBe("商家补充")
+    expect(supplemented.audit.profile.find((field) => field.key === "return_policy")?.source).toBe("merchant supplement")
     const second = await publishVersion(supplemented.audit)
     await writeAudit(second)
     expect((await readVersionFile(second.id, 1, "pack.zip"))?.byteLength).toBeGreaterThan(10)
-    expect((await readVersionFile(second.id, 2, "02-profile-draft.md"))?.toString("utf8")).toContain("商家补充")
+    expect((await readVersionFile(second.id, 2, "02-profile-draft.md"))?.toString("utf8")).toContain("merchant supplement")
   })
 })
 

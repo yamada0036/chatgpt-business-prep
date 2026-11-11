@@ -33,10 +33,10 @@ function make(
 function languageNote(text: string, language: OutputLanguage): string | null {
   const kind = scriptKind(text)
   if (language === "en" && kind === "cjk") {
-    return "原文不是英文。本工具不翻译，以免改写事实。suggested_value 留空。"
+    return "The source text is not English. This tool does not translate, so suggested_value is left blank."
   }
   if (language === "zh" && kind === "latin") {
-    return "原文不是中文。本工具不翻译，以免改写事实。suggested_value 留空。"
+    return "The source text is not Chinese. This tool does not translate, so suggested_value is left blank."
   }
   return null
 }
@@ -49,7 +49,7 @@ function draftFrom(text: string, language: OutputLanguage): { value: string; not
   const clipped = clipChars(cleaned, 1200)
   return {
     value: clipped.text,
-    note: clipped.clipped ? "草稿只保留前 1200 个字符，原文见 current_found。" : "",
+    note: clipped.clipped ? "The draft keeps the first 1,200 characters. The full text is in current_found." : "",
   }
 }
 
@@ -57,7 +57,7 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
   if (!facts.homeFetched) {
     return PROFILE_FIELDS.map((field) =>
       make(field.key, "not_fetched", {
-        note: "未抓到公开页面。不能据此填写这项资料。",
+        note: "No public page was fetched. This field cannot be filled from that.",
       }),
     )
   }
@@ -67,7 +67,7 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
       ? make("website", "conflict", {
           conflicts: facts.websiteConflicts,
           currentFound: facts.websiteConflicts.map((item) => item.value).join("\n"),
-          note: "输入网址和页面上的主域名不一致。两个值都保留在冲突列表里，草稿不选其中一个。",
+          note: "The URL you entered and the primary domain on the page do not match. Both values stay in the conflict list. The draft does not pick one.",
         })
       : make("website", "ready", {
           source: facts.finalUrl,
@@ -88,7 +88,7 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
         },
       )
     : make("business_description", "missing", {
-        note: "已查看抓到的公开页面，没有看到可改写的业务描述。",
+        note: "The public pages that were fetched have no business description that can be rewritten.",
       })
 
   const categories = facts.categories.slice(0, 6)
@@ -97,10 +97,10 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
         source: facts.categorySource,
         currentFound: categories.join(", "),
         suggestedValue: categories.join(", "),
-        note: "归纳自公开导航或商品类目，不是官方类目树里的硬编码映射。",
+        note: "Taken from public navigation or product categories. This is not a hardcoded official category.",
       })
     : make("product_or_service_category", "needs_input", {
-        note: "导航和商品类目不够明确，没有猜测一个官方类目。",
+        note: "The navigation and product categories are not clear enough. No official category was guessed.",
       })
 
   const logo = facts.logoUrl
@@ -110,7 +110,7 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
         suggestedValue: facts.logoUrl,
       })
     : make("logo", "missing", {
-        note: "已查看公开页面，没有看到可公开访问的 logo 图片 URL。",
+        note: "The public pages have no publicly reachable logo image URL.",
       })
 
   const delivery = policyField(
@@ -135,10 +135,10 @@ export function buildProfile(facts: CrawlFacts, language: OutputLanguage): Profi
         source: facts.coverSource,
         currentFound: facts.coverUrl,
         suggestedValue: facts.coverUrl,
-        note: "可选项。",
+        note: "Optional.",
       })
     : make("cover_photo", "missing", {
-        note: "可选项。没有看到合适的封面图，这不算缺项。",
+        note: "Optional. No suitable cover image was found, and that is not a missing required field.",
       })
 
   return [website, description, category, logo, delivery, returns, cover]
@@ -159,17 +159,17 @@ function policyField(
       source: url,
       currentFound: clipChars(excerpt, 2000).text,
       suggestedValue: suggested,
-      note: draft.note || (draft.value ? "" : "草稿使用政策页 URL。"),
+      note: draft.note || (draft.value ? "" : "The draft uses the policy page URL."),
     })
   }
   if (linked && !fetched) {
     return make(key, "not_fetched", {
       source: url,
-      note: "找到了链接，但页面未抓到。不能据此判断这项政策有没有写。",
+      note: "A link was found, but the page was not fetched. That is not enough to say whether this policy is written.",
     })
   }
   return make(key, "missing", {
-    note: "已查看抓到的公开页面和链接，没有看到这项政策。这只说明这次没看到。",
+    note: "The fetched public pages and links do not show this policy. That only means it was not seen this time.",
   })
 }
 

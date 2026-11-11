@@ -8,7 +8,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   const audit = await readAudit(id)
   if (!audit) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
   if (audit.order.status === "paid" || audit.order.status === "delivered") {
-    return Response.json({ error: { code: "paid", message: "已经交付的准备包请用补充字段生成新版本，不再整单重抓。" } }, { status: 409 })
+    return Response.json({ error: { code: "paid", message: "A delivered prep pack gets a new version from supplemented fields. The whole order is not crawled again." } }, { status: 409 })
   }
   await updateAudit(id, (current) => ({
     ...current,

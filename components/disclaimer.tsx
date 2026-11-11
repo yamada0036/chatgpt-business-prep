@@ -6,7 +6,7 @@ export function Disclaimer({ compact = false }: { compact?: boolean }) {
       <p className="font-medium text-foreground">{DISCLAIMER_SHORT}</p>
       {compact ? null : (
         <p>
-          官方说明：
+          Official docs:
           {" "}
           <a className="underline" href={OFFICIAL_LINKS.help}>Setting up your business on ChatGPT</a>
           {" · "}

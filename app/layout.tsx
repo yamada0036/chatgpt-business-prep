@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "铺前 · ChatGPT 商家入驻准备",
-  description: "检查公开店铺资料和商品 feed 缺什么。先免费体检，付费后下载准备包。不代认领，不保证推荐。",
+  title: "Prep · ChatGPT business setup",
+  description: "Check what a public store and product feed are missing. Start with a free audit, then download a prep pack after payment. This tool does not claim the business and does not promise a recommendation.",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <SiteShell>{children}</SiteShell>
       </body>

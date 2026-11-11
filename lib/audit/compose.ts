@@ -31,21 +31,21 @@ export function composeFromSources(input: {
   let feedReason = ""
   let finalized = finalizeProducts([])
   if (!input.includeProductFeed) {
-    feedReason = "商家未要求整理商品 feed。"
+    feedReason = "The merchant did not ask for a product feed."
   } else if (input.upload) {
     feedApplicable = true
     const merged = mergeProducts(uploadToRaw(input.upload), input.crawl.products)
     finalized = finalizeProducts(merged)
     if (input.upload.omittedRowCount > 0) {
-      feedReason = `上传表格共超出上限 ${input.upload.omittedRowCount} 行，这些行没有进入准备包。`
+      feedReason = `${input.upload.omittedRowCount} uploaded rows were over the cap and were not put in the prep pack.`
     }
   } else if (!input.crawl.sawProductLinks) {
-    feedReason = "未发现可公开访问的商品。资料清单已生成。商品 feed 不适用。"
+    feedReason = "No publicly reachable products were found. The profile checklist was still created. A product feed does not apply."
   } else {
     feedApplicable = true
     finalized = finalizeProducts(input.crawl.products)
     if (finalized.rows.length === 0) {
-      feedReason = "看到了商品入口，但没有抓到可写入 feed 的商品行。"
+      feedReason = "Product links were seen, but no product rows that can be written to the feed were fetched."
     }
   }
   if (!feedApplicable) finalized = { rows: [], issues: [], summary: emptySummary() }

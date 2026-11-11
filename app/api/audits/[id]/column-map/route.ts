@@ -9,10 +9,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const audit = await readAudit(id)
   if (!audit?.upload) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
   if (audit.status !== "needs_column_map") {
-    return Response.json({ error: { code: "state", message: "这次体检不需要列映射。" } }, { status: 409 })
+    return Response.json({ error: { code: "state", message: "This audit does not need a column map." } }, { status: 409 })
   }
   if (audit.upload.mapUsed) {
-    return Response.json({ error: { code: "map_used", message: "列映射只能提交一次。请改表格后重新体检。" } }, { status: 409 })
+    return Response.json({ error: { code: "map_used", message: "A column map can be submitted once. Edit the sheet and run a new audit." } }, { status: 409 })
   }
   const body = (await request.json()) as { mapping?: Record<string, string> }
   const mapping = mappingFromHeaders(audit.upload.headers, body.mapping ?? {})

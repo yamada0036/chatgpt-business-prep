@@ -36,7 +36,7 @@ function blankIssue(
     currentValue,
     suggestedValue: "",
     sourceUrl,
-    note: `第 ${rowIndex + 1} 行。${note}`,
+    note: `Row ${rowIndex + 1}. ${note}`,
   }
 }
 
@@ -72,7 +72,7 @@ export function finalizeProducts(products: RawProduct[]): {
           "conflict",
           values.map((item) => `${item.source}: ${item.value}`).join(" | "),
           values.map((item) => item.source).find((source) => /^https?:\/\//.test(source)) ?? "",
-          "同一字段的来源不一致，单元格留空，没有选用其中一个。",
+          "Sources for the same field disagree. The cell was left blank, and neither value was chosen.",
         ),
       )
     }
@@ -126,8 +126,8 @@ export function finalizeProducts(products: RawProduct[]): {
             normalized.value,
             sourceUrlOf(cell.source, page),
             field === "title"
-              ? "截断后标题仍超过 150 个字符。"
-              : "截断后描述仍超过 5000 个字符。",
+              ? "After truncation the title is still over 150 characters."
+              : "After truncation the description is still over 5,000 characters.",
           ),
         )
       }
@@ -175,7 +175,7 @@ export function finalizeProducts(products: RawProduct[]): {
     if (!cells.availability?.value) {
       cells.availability = {
         value: "unknown",
-        source: sourceUrlOf(product.fields.availability?.source ?? "", page) || page || "官方规则",
+        source: sourceUrlOf(product.fields.availability?.source ?? "", page) || page || "official rule",
       }
       issues.push(
         blankIssue(
@@ -185,7 +185,7 @@ export function finalizeProducts(products: RawProduct[]): {
           "needs_merchant_input",
           "",
           page,
-          "库存状态未知。按官方要求写入 unknown，没有把它留空，也没有写成有货。",
+          "Stock status is unknown. The official value unknown was written. The cell was not left blank and was not marked in stock.",
         ),
       )
     }
@@ -194,7 +194,7 @@ export function finalizeProducts(products: RawProduct[]): {
       if (field === "availability") continue
       if (!cells[field]?.value) {
         issues.push(
-          blankIssue(index, itemId, field, "missing", "", page, "必填字段为空。"),
+          blankIssue(index, itemId, field, "missing", "", page, "A required field is empty."),
         )
       }
     }
@@ -210,7 +210,7 @@ export function finalizeProducts(products: RawProduct[]): {
           "invalid",
           current,
           page,
-          "退货天数只在 accepts_returns 为 true 时写入。没有把退货政策推测成接受退货。",
+          "Return days are written only when accepts_returns is true. The return policy was not guessed to be accepted.",
         ),
       )
     }
@@ -229,7 +229,7 @@ export function finalizeProducts(products: RawProduct[]): {
             "invalid",
             current,
             page,
-            "sale_price 必须大于 0、与 price 同币种，并且严格小于 price。该值已省略。",
+            "sale_price must be greater than 0, use the same currency as price, and be strictly less than price. The value was omitted.",
           ),
         )
       }
@@ -252,7 +252,7 @@ export function finalizeProducts(products: RawProduct[]): {
           "invalid",
           id,
           "",
-          "item_id 在本 feed 内重复。单元格已留空，没有另造一个新 ID。",
+          "item_id is duplicated in this feed. The cell was left blank. A new ID was not invented.",
         ),
       )
     } else {
@@ -299,7 +299,7 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
       value: "",
       drop: true,
       issue: "invalid",
-      note: "占位符已去掉，没有把它当成真实值。",
+      note: "A placeholder was removed and was not treated as a real value.",
       current: value,
     }
   }
@@ -309,7 +309,7 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
       return {
         value: "unknown",
         issue: "invalid",
-        note: "无法识别的库存值没有照搬。单元格改为官方允许的 unknown。",
+        note: "An unrecognized stock value was not copied through. The cell was set to the official value unknown.",
         current: value,
       }
     }
@@ -324,8 +324,8 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
         issue: money.reason === "currency" ? "needs_merchant_input" : "invalid",
         note:
           money.reason === "currency"
-            ? "有金额但没有可靠的货币代码，没有猜测币种。"
-            : "价格不是「金额 货币代码」格式，单元格留空。",
+            ? "There is an amount but no reliable currency code. The currency was not guessed."
+            : "The price is not in amount-plus-currency-code form. The cell was left blank.",
         current: value,
       }
     }
@@ -338,7 +338,7 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
         value: "",
         drop: true,
         issue: "invalid",
-        note: "金额格式无效，已省略。",
+        note: "The amount format is invalid, so it was omitted.",
         current: value,
       }
     }
@@ -352,13 +352,13 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
     if (charLength(text) > DESCRIPTION_HARD_CAP) {
       text = clipChars(text, DESCRIPTION_HARD_CAP).text
       issue = "truncated"
-      note = `超过 ${DESCRIPTION_HARD_CAP} 个字符，已截断并标记 truncated。`
+      note = `Over ${DESCRIPTION_HARD_CAP} characters. It was truncated and marked truncated.`
     } else if (charLength(text) > max) {
       issue = "invalid"
       note =
         field === "title"
-          ? "标题超过 150 个字符。官方建议不超过该长度。本工具没有静默截断。"
-          : "描述超过 5000 个字符。官方建议不超过该长度。本工具没有静默截断。"
+          ? "The title is over 150 characters. The official guidance is to stay within that length. This tool did not silently truncate it."
+          : "The description is over 5,000 characters. The official guidance is to stay within that length. This tool did not silently truncate it."
     }
     return { value: text, issue, note, current: text }
   }
@@ -369,7 +369,7 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
         value: "",
         drop: true,
         issue: "invalid",
-        note: "GTIN 未通过校验或不是 8/12/13/14 位。已留空，没有编造编号。",
+        note: "The GTIN failed the check or is not 8, 12, 13, or 14 digits. It was left blank. A code was not invented.",
         current: value,
       }
     }
@@ -379,7 +379,7 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
     const key = value.toLowerCase().replace(/^https?:\/\/schema\.org\//, "").replace(/condition$/, "")
     const mapped = key.includes("refurb") ? "refurbished" : key.includes("used") ? "used" : key.includes("new") ? "new" : ""
     if (!(CONDITION_VALUES as readonly string[]).includes(mapped)) {
-      return { value: "", drop: true, issue: "invalid", note: "condition 只能是 new、refurbished 或 used。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "condition must be new, refurbished, or used.", current: value }
     }
     return { value: mapped, note: "" }
   }
@@ -387,34 +387,34 @@ function normalizeCell(field: string, raw: string, page: string): Normalized {
     const token = value.toLowerCase()
     if (["true", "yes", "1"].includes(token)) return { value: "true", note: "" }
     if (["false", "no", "0"].includes(token)) return { value: "false", note: "" }
-    return { value: "", drop: true, issue: "invalid", note: "布尔值只能是 true 或 false。", current: value }
+    return { value: "", drop: true, issue: "invalid", note: "A boolean must be true or false.", current: value }
   }
   if (field === "return_deadline_in_days") {
     if (!/^\d+$/.test(value) || Number(value) <= 0) {
-      return { value: "", drop: true, issue: "invalid", note: "退货天数必须是正整数。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "Return days must be a positive integer.", current: value }
     }
     return { value: String(Number(value)), note: "" }
   }
   if (field === "variant_dict") {
     if (!isVariantDict(value)) {
-      return { value: "", drop: true, issue: "invalid", note: "variant_dict 不是键值都为非空字符串的 JSON 对象。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "variant_dict is not a JSON object whose keys and values are non-empty strings.", current: value }
     }
     return { value: canonicalDict(value), note: "" }
   }
   if (field === "additional_image_urls") {
     const urls = splitImages(value, page)
     if (urls.length === 0) {
-      return { value: "", drop: true, issue: "invalid", note: "附加图片没有可用的绝对 URL。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "The extra images have no usable absolute URL.", current: value }
     }
     return { value: urls.join(","), note: "" }
   }
   if (URL_FIELDS.has(field) || field === "url" || field === "image_url") {
     const absolute = toAbsoluteUrl(value, page || value)
     if (!absolute) {
-      return { value: "", drop: true, issue: "invalid", note: "不是可公开访问的绝对 http(s) URL。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "This is not a publicly reachable absolute http(s) URL.", current: value }
     }
     if (field === "image_url" && BAD_IMAGE.test(absolute)) {
-      return { value: "", drop: true, issue: "invalid", note: "图片 URL 指向页面而不是直接图片。", current: value }
+      return { value: "", drop: true, issue: "invalid", note: "The image URL points at a page rather than an image file.", current: value }
     }
     return { value: absolute, note: "" }
   }

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Disclaimer } from "@/components/disclaimer"
 import type { PublicAudit } from "@/lib/public-view"
 
-const ORDER_LABEL = { pending: "待支付", paid: "已支付", delivered: "已交付", failed: "已失败" } as const
+const ORDER_LABEL = { pending: "Pending payment", paid: "Paid", delivered: "Delivered", failed: "Failed" } as const
 
 function money(cents: number, currency: string): string {
   const abs = Math.abs(cents)
@@ -30,9 +30,9 @@ export function CheckoutPanel({ id }: { id: string }) {
       .then((data: PublicAudit) => setAudit(data))
   }, [id])
 
-  if (!audit) return <p className="text-sm text-muted-foreground">正在读取订单…</p>
+  if (!audit) return <p className="text-sm text-muted-foreground">Loading the order…</p>
   if (audit.status !== "complete" && audit.status !== "partial" && audit.order.status === "pending") {
-    return <p className="text-sm">体检还没完成，暂时不能支付。</p>
+    return <p className="text-sm">The audit is not finished, so payment is not open yet.</p>
   }
   const quote = audit.order.breakdown
   const shown = money(quote.totalCents, quote.currency)
@@ -48,7 +48,7 @@ export function CheckoutPanel({ id }: { id: string }) {
     const data = (await response.json()) as PublicAudit & { error?: { message: string } }
     setPending(false)
     if (!response.ok) {
-      setError(data.error?.message ?? "支付没有完成。")
+      setError(data.error?.message ?? "Payment did not finish.")
       return
     }
     if (action === "pay") router.push(`/audit/${id}/delivery`)
@@ -57,31 +57,31 @@ export function CheckoutPanel({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight">一次一店准备包</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">One-store prep pack</h1>
       <Disclaimer compact />
       <Card>
         <CardHeader>
-          <CardTitle>应付金额 {shown}</CardTitle>
+          <CardTitle>Amount due {shown}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm leading-6">
-          <p>订单状态：{ORDER_LABEL[audit.order.status]}</p>
-          <p>{quote.priceEnvSet ? "金额来自环境变量 PREP_BASE_PRICE_CENTS 和加价配置。" : "正式价格尚未配置，当前金额是 0，只为验证付费门闩。"} 这是测试配置，不是已确定的正式售价。</p>
-          <p>基础包 {money(quote.baseCents, quote.currency)}，包含 {quote.includedSkus} 行。本次计入 {quote.rowCount} 行，超出 {quote.overageBlocks} 档 × {money(quote.blockPriceCents, quote.currency)}，加价 {money(quote.overageCents, quote.currency)}。</p>
-          <p>模拟支付记账金额与上面的应付金额使用同一个公式。这里不收集卡号。</p>
+          <p>Order status: {ORDER_LABEL[audit.order.status]}</p>
+          <p>{quote.priceEnvSet ? "The amount comes from PREP_BASE_PRICE_CENTS and the overage settings." : "A live price is not configured, so the amount is 0 and only checks the payment gate."} This is a test configuration, not a decided live price.</p>
+          <p>Base pack {money(quote.baseCents, quote.currency)}, including {quote.includedSkus} rows. This order counts {quote.rowCount} rows, {quote.overageBlocks} extra blocks × {money(quote.blockPriceCents, quote.currency)}, overage {money(quote.overageCents, quote.currency)}.</p>
+          <p>Simulated payment records the same amount as the total above. This page does not collect card numbers.</p>
           {audit.order.failureReason ? <p>{audit.order.failureReason}</p> : null}
           {audit.order.status === "delivered" ? (
-            <Button asChild><a href={`/audit/${id}/delivery`}>去交付页</a></Button>
+            <Button asChild><a href={`/audit/${id}/delivery`}>Go to delivery</a></Button>
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="contact_email">联系邮箱（付费前必填）</Label>
+                <Label htmlFor="contact_email">Contact email (required before payment)</Label>
                 <Input id="contact_email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@store.example" />
-                {audit.contactEmail ? <p className="text-muted-foreground">已保存 {audit.contactEmail}。留空则继续用它。</p> : null}
+                {audit.contactEmail ? <p className="text-muted-foreground">Saved {audit.contactEmail}. Leave this blank to keep it.</p> : null}
               </div>
               {error ? <p className="text-destructive">{error}</p> : null}
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button className="h-11" disabled={pending} onClick={() => pay("pay")}>确认模拟支付（测试）</Button>
-                <Button variant="outline" disabled={pending} onClick={() => pay("fail")}>模拟支付失败（测试）</Button>
+                <Button className="h-11" disabled={pending} onClick={() => pay("pay")}>Confirm simulated payment (test)</Button>
+                <Button variant="outline" disabled={pending} onClick={() => pay("fail")}>Simulate a failed payment (test)</Button>
               </div>
             </>
           )}
@@ -89,8 +89,8 @@ export function CheckoutPanel({ id }: { id: string }) {
       </Card>
       {audit.order.status === "failed" ? (
         <Alert>
-          <AlertTitle>已失败</AlertTitle>
-          <AlertDescription>没有进入交付页。可以再用模拟支付成功重试。</AlertDescription>
+          <AlertTitle>Failed</AlertTitle>
+          <AlertDescription>Delivery did not open. You can retry with a successful simulated payment.</AlertDescription>
         </Alert>
       ) : null}
     </div>

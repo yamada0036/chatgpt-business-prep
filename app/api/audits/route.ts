@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const includeAgentPack = String(form.get("include_agent_pack") ?? "false") === "true"
   const contactEmail = String(form.get("contact_email") ?? "").trim()
   if (contactEmail && !looksLikeEmail(contactEmail)) {
-    return Response.json({ error: { code: "email", message: "联系邮箱格式不对。" } }, { status: 400 })
+    return Response.json({ error: { code: "email", message: "The contact email format is not valid." } }, { status: 400 })
   }
   const config = getConfig()
   try {

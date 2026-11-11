@@ -9,9 +9,11 @@ import {
   CLAIM_STEPS_ZH,
   DISCLAIMER_BLOCKS,
   DISCLAIMER_SHORT,
+  MERCHANT_SOURCE,
   OFFICIAL_LINKS,
   PACK_FILES,
   REQUIRED_FEED_FIELDS,
+  UPLOAD_SOURCE,
 } from "@/lib/official/spec"
 import { shanghaiLabel } from "@/lib/time"
 
@@ -45,7 +47,7 @@ function renderReadme(audit: AuditRecord, version: number, when: string): string
     .map((page) => `- ${page.status === "fetched" ? "fetched" : "not_fetched"} | ${page.role} | ${page.url}${page.reason ? ` | ${page.reason}` : ""}`)
     .join("\n")
   const crawled = audit.profile.filter((field) => field.source.startsWith("http")).map((field) => field.fieldName)
-  const merchant = audit.profile.filter((field) => field.source === "商家补充").map((field) => field.fieldName)
+  const merchant = audit.profile.filter((field) => field.source === MERCHANT_SOURCE).map((field) => field.fieldName)
   const empty = audit.profile.filter((field) => !field.suggestedValue).map((field) => field.fieldName)
   return [
     "# ChatGPT business prep pack",
@@ -63,9 +65,9 @@ function renderReadme(audit: AuditRecord, version: number, when: string): string
     "## Where values came from",
     "",
     `- crawled into a draft: ${crawled.join(", ") || "none"}`,
-    `- merchant supplement (商家补充): ${merchant.join(", ") || "none"}`,
+    `- merchant supplement: ${merchant.join(", ") || "none"}`,
     `- still empty: ${empty.join(", ") || "none"}`,
-    `- product rows from an uploaded sheet are labeled 商家上传表格`,
+    `- product rows from an uploaded sheet are labeled ${UPLOAD_SOURCE}`,
     audit.feedReason ? `- feed: ${audit.feedReason}` : "- feed: see 03-product-feed.csv",
     audit.upload && audit.upload.omittedRowCount > 0
       ? `- omitted upload rows: ${audit.upload.omittedRowCount}. They were not dropped silently.`
@@ -134,11 +136,11 @@ function renderChecklist(audit: AuditRecord, version: number, when: string): str
 }
 
 function statusLabel(field: ProfileField, english: boolean): string {
-  if (field.display === "ready") return english ? "Ready / 已具备" : "已具备"
-  if (field.display === "conflict") return english ? "Still open / 有冲突" : "有冲突"
-  if (field.display === "not_fetched") return english ? "Not fetched / 未抓到" : "未抓到"
-  if (!field.required && !field.suggestedValue) return english ? "Optional / 可选项" : "可选项，仍缺"
-  return english ? "Still open / 仍缺" : "仍缺"
+  if (field.display === "ready") return english ? "Ready" : "已具备"
+  if (field.display === "conflict") return english ? "Conflict" : "有冲突"
+  if (field.display === "not_fetched") return english ? "Not fetched" : "未抓到"
+  if (!field.required && !field.suggestedValue) return english ? "Optional" : "可选项，仍缺"
+  return english ? "Still missing" : "仍缺"
 }
 
 function renderProfile(audit: AuditRecord, version: number, when: string): string {
@@ -227,7 +229,7 @@ function renderAgent(audit: AuditRecord, version: number, when: string): string 
     `> ${AGENT_WARNING_ACTIONS}`,
     "",
     english
-      ? "> Eligibility warning. Business agents are currently available only to eligible ecommerce and online service businesses in the United States, and a website is required. This draft does not decide eligibility. If the public pages are not enough, the judgment stays: 无法判断."
+      ? "> Eligibility warning. Business agents are currently available only to eligible ecommerce and online service businesses in the United States, and a website is required. This draft does not decide eligibility. If the public pages are not enough, the judgment stays: cannot tell."
       : "> 这是草稿。即使勾选了 Agent，信息不足时也只给草稿并加上警告。",
     "",
     `- store_url: ${audit.storeUrl}`,

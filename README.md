@@ -1,4 +1,4 @@
-# 铺前
+# Prep
 
 A preparation site for merchants who want to claim a business in ChatGPT. It checks public pages and an optional product spreadsheet against the official profile fields and the OpenAI discovery product feed, shows a free audit, and — after a simulated payment — downloads a prep pack the merchant submits themselves.
 
@@ -43,7 +43,7 @@ Official field names, availability enums, excluded Ads/Checkout columns, claim s
 
 ## Simulated checkout
 
-v1 does not talk to a payment provider and never renders a card form. The checkout buttons are labeled as tests. "确认模拟支付（测试）" marks the order paid and unlocks the pack for the amount currently configured. "模拟支付失败（测试）" sets the order to 已失败 and does not create files.
+v1 does not talk to a payment provider and never renders a card form. The checkout buttons are labeled as tests. "Confirm simulated payment (test)" marks the order paid and unlocks the pack for the amount currently configured. "Simulate a failed payment (test)" sets the order to failed and does not create files.
 
 A later provider should create a hosted checkout for that same `amountCents` and currency, then mark the order paid from a verified webhook. The seam is `lib/audit/checkout.ts`. Do not collect card numbers, CVC, or one-time codes in this app. v1 also does not send the contact email; it is stored only so the gate can be tested.
 
@@ -77,7 +77,7 @@ On the home page, use the buttons that fill these URLs (same host and port as th
 
 - JavaScript storefronts are not rendered. The crawler reads HTML, JSON-LD, and public `products.json`.
 - Product titles and descriptions are kept in the language found on the page. The tool does not translate them.
-- Profile notes in the draft are Chinese. Pasteable values and the checklist follow the output language selected on the form (default English).
+- Profile notes in the draft are English. Pasteable values and the checklist follow the output language selected on the form (default English). The site itself is English.
 - Image URLs found on the page are recorded. v1 does not HEAD-check every image.
 - No Shopify OAuth, no SFTP, no Business Hub login, no email delivery, no multi-store queue.
 - `availability: unknown` counts as a filled official value. The issues file still asks the merchant to replace it.
@@ -85,22 +85,22 @@ On the home page, use the buttons that fill these URLs (same host and port as th
 
 ## How to verify the acceptance criteria
 
-1. Paste `/fixtures/complete` (or any public store) with no file. The free audit lists each profile field as 已具备 / 缺失 / 需补充 / 有冲突.
+1. Paste `/fixtures/complete` (or any public store) with no file. The free audit lists each profile field as Ready / Missing / Needs input / Conflict.
 2. Upload a CSV that shares `item_id` with a crawled product but disagrees on `price`. The issues file records `conflict` and the feed cell is empty. Covered by `tests/prep.test.ts`.
 3. Before payment, `GET /api/audits/:id/download` returns 403. The free JSON has no full profile draft and no full product description.
 4. After simulated payment, the zip contains the five required files. With the agent box on, it also contains `04-agent-pack.md`; otherwise that name is absent.
 5. Feed headers are the official English names. `price` looks like `18.00 USD`. A non-empty `availability` is one of the five official values.
-6. Run `/fixtures/incomplete`. Brand and price cells are empty. The return policy is empty or 需补充 / 缺失, not an invented policy.
-7. Run `/fixtures/login`. The report says 未抓到 and does not say the policy 不存在.
-8. The home page, audit page, delivery page, and `00-readme.md` all include 不代认领 and 不保证推荐.
+6. Run `/fixtures/incomplete`. Brand and price cells are empty. The return policy is empty or Needs input / Missing, not an invented policy.
+7. Run `/fixtures/login`. The report says Not fetched and does not say the policy does not exist.
+8. The home page, audit page, delivery page, and `00-readme.md` all include "does not claim" and "does not promise a recommendation".
 9. An agent draft starts with the US eligibility warning and says the agent cannot place orders, bookings, or order lookups.
 10. On the delivery page, submit a missing field. A new version appears and the previous zip still downloads.
 11. The app forms have no password, OTP, or identity-document fields. The login fixture is a fake storefront used only to test the crawler.
 12. If required feed cells are still empty, the delivery page states the row count and that those rows may be rejected.
-13. Suggested profile values cite a source URL or `商家补充`. Re-run two public stores when you want a live check; blocked or login-only pages stay 未抓到.
+13. Suggested profile values cite a source URL or `merchant supplement`. Re-run two public stores when you want a live check; blocked or login-only pages stay Not fetched.
 14. Required-field checks follow the products spec linked from `lib/official/spec.ts`, including money format and the availability enum.
 15. Titles over 150 characters and descriptions over 5,000 stay intact and get an `invalid` issue. The issues file uses `truncated` only when text is actually cut (the hard cap is 20,000 characters).
-16. Shopify-style variants in `/fixtures/shop` become separate rows with `group_id`, `listing_has_variations`, and `variant_dict`. `/fixtures/options` stays one row and the issues file says 未处理变体.
+16. Shopify-style variants in `/fixtures/shop` become separate rows with `group_id`, `listing_has_variations`, and `variant_dict`. `/fixtures/options` stays one row and the issues file says the variants were not split.
 17. The crawl budget stops a slow audit with a partial result and a retry. It does not spin past the budget.
 18. `PREP_RETENTION_DAYS` is shown on the delivery page. Expired audit folders are removed on the next read.
 19. Logs go through `logEvent`, which drops password, OTP, card, and document keys. There is no card field to store.
