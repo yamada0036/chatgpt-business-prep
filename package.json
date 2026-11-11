@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "@vercel/blob": "^2.9.0",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",

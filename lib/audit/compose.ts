@@ -85,6 +85,7 @@ export function composeFromSources(input: {
 
 export function withQuote(audit: AuditRecord): AuditRecord {
   if (audit.order.status !== "pending") return audit
+  if (audit.order.paypalOrderId) return audit
   return {
     ...audit,
     order: {

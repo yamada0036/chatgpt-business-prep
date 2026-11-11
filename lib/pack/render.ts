@@ -1,6 +1,7 @@
 import type { AuditRecord, FeedIssue, ProfileField } from "@/lib/audit/types"
 import { toCsv } from "@/lib/csv"
 import { columnsFor, incompleteRowCount } from "@/lib/feed/finalize"
+import { packScope } from "@/lib/pack/scope"
 import { formatCents } from "@/lib/pricing"
 import {
   AGENT_WARNING_ACTIONS,
@@ -19,14 +20,15 @@ import { shanghaiLabel } from "@/lib/time"
 
 export function renderPack(audit: AuditRecord, version: number, generatedAt: Date): Record<string, string> {
   const when = shanghaiLabel(generatedAt)
+  const scope = packScope(audit)
   const files: Record<string, string> = {
-    [PACK_FILES.readme]: renderReadme(audit, version, when),
+    [PACK_FILES.readme]: renderReadme(audit, version, when, scope.note),
     [PACK_FILES.checklist]: renderChecklist(audit, version, when),
     [PACK_FILES.profile]: renderProfile(audit, version, when),
-    [PACK_FILES.feed]: renderFeed(audit),
-    [PACK_FILES.issues]: renderIssues(audit.feedIssues),
+    [PACK_FILES.feed]: renderFeed(scope.rows),
+    [PACK_FILES.issues]: renderIssues(scope.issues),
   }
-  if (audit.includeAgentPack) files[PACK_FILES.agent] = renderAgent(audit, version, when)
+  if (audit.includeAgentPack) files[PACK_FILES.agent] = renderAgent(audit, version, when, scope.rows)
   return files
 }
 
@@ -42,7 +44,7 @@ export function packFileList(includeAgent: boolean): string[] {
   return files
 }
 
-function renderReadme(audit: AuditRecord, version: number, when: string): string {
+function renderReadme(audit: AuditRecord, version: number, when: string, skuCapNote: string): string {
   const pages = audit.pages
     .map((page) => `- ${page.status === "fetched" ? "fetched" : "not_fetched"} | ${page.role} | ${page.url}${page.reason ? ` | ${page.reason}` : ""}`)
     .join("\n")
@@ -72,6 +74,7 @@ function renderReadme(audit: AuditRecord, version: number, when: string): string
     audit.upload && audit.upload.omittedRowCount > 0
       ? `- omitted upload rows: ${audit.upload.omittedRowCount}. They were not dropped silently.`
       : "",
+    skuCapNote ? `- sku cap: ${skuCapNote}` : "",
     "",
     "## Official documents",
     "",
@@ -192,9 +195,9 @@ function fence(value: string): string {
   return `\`\`\`\n${value}\n\`\`\``
 }
 
-function renderFeed(audit: AuditRecord): string {
-  const columns = columnsFor(audit.feedRows)
-  const rows = audit.feedRows.map((row) => columns.map((column) => row.cells[column]?.value ?? ""))
+function renderFeed(feedRows: AuditRecord["feedRows"]): string {
+  const columns = columnsFor(feedRows)
+  const rows = feedRows.map((row) => columns.map((column) => row.cells[column]?.value ?? ""))
   return toCsv(columns.length ? columns : [...REQUIRED_FEED_FIELDS], rows)
 }
 
@@ -214,7 +217,7 @@ function renderIssues(issues: FeedIssue[]): string {
   )
 }
 
-function renderAgent(audit: AuditRecord, version: number, when: string): string {
+function renderAgent(audit: AuditRecord, version: number, when: string, feedRows: AuditRecord["feedRows"]): string {
   const returns = audit.profile.find((field) => field.key === "return_policy")
   const excerpt = returns?.currentFound?.slice(0, 500) ?? ""
   const sale = excerpt
@@ -242,7 +245,7 @@ function renderAgent(audit: AuditRecord, version: number, when: string): string 
       ? "Review the product points and the return policy below in the official agent settings. This tool does not publish the agent."
       : "请在官方 Agent 设置里审阅下面的商品要点和退货政策。本工具不会替你 Publish。",
     "",
-    ...audit.feedRows.slice(0, 8).map((row) => {
+    ...feedRows.slice(0, 8).map((row) => {
       const title = row.cells.title?.value || "(empty title)"
       const url = row.cells.url?.value || ""
       return `- ${title}${url ? ` — ${url}` : ""}`
@@ -277,7 +280,7 @@ function renderAgent(audit: AuditRecord, version: number, when: string): string 
     "",
     DISCLAIMER_SHORT,
     "",
-    `Quoted price for this pack was ${formatCents(audit.order.breakdown.totalCents, audit.order.breakdown.currency)}. Incomplete feed rows: ${incompleteRowCount(audit.feedRows)}.`,
+    `Quoted price for this pack was ${formatCents(audit.order.breakdown.totalCents, audit.order.breakdown.currency)}. Incomplete feed rows: ${incompleteRowCount(feedRows)}.`,
     "",
   ].join("\n")
 }

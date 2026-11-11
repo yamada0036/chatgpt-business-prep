@@ -1,5 +1,6 @@
 import type { PriceBreakdown } from "@/lib/audit/types"
 import { getConfig } from "@/lib/config"
+import { checkoutMode } from "@/lib/site-mode"
 
 export function quotePrice(rowCount: number): PriceBreakdown {
   const config = getConfig()
@@ -19,7 +20,7 @@ export function quotePrice(rowCount: number): PriceBreakdown {
     overageCents,
     totalCents: config.basePriceCents + overageCents,
     priceEnvSet: config.priceEnvSet,
-    mode: "simulated",
+    mode: checkoutMode(),
   }
 }
 

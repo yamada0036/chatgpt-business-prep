@@ -1,6 +1,7 @@
 import { AuditForm } from "@/components/audit-form"
 import { Disclaimer } from "@/components/disclaimer"
 import { DISCLAIMER_SHORT } from "@/lib/official/spec"
+import { showFixtureButtons } from "@/lib/site-mode"
 
 export default function Home() {
   return (
@@ -23,7 +24,7 @@ export default function Home() {
         </ul>
         <p className="sr-only">{DISCLAIMER_SHORT}</p>
       </section>
-      <AuditForm />
+      <AuditForm showFixtures={showFixtureButtons()} />
     </div>
   )
 }

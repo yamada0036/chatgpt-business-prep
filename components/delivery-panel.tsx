@@ -11,7 +11,7 @@ import { Disclaimer } from "@/components/disclaimer"
 import type { PublicAudit } from "@/lib/public-view"
 import { shanghaiLabel } from "@/lib/time"
 
-const ORDER_LABEL = { pending: "Pending payment", paid: "Paid", delivered: "Delivered", failed: "Failed" } as const
+const ORDER_LABEL = { pending: "Pending payment", paid: "Paid", delivered: "Delivered", failed: "Failed", refunded: "Refunded" } as const
 
 export function DeliveryPanel({ id }: { id: string }) {
   const [audit, setAudit] = useState<PublicAudit | null>(null)
@@ -35,7 +35,11 @@ export function DeliveryPanel({ id }: { id: string }) {
     return (
       <div className="space-y-3">
         <h1 className="text-3xl font-semibold">Delivery is still locked</h1>
-        <p className="text-sm">The full prep pack downloads only after payment succeeds.</p>
+        <p className="text-sm">
+          {audit.order.status === "refunded"
+            ? "This payment was refunded or reversed. The prep pack is not available for download."
+            : "The full prep pack downloads only after a verified payment."}
+        </p>
         <Button asChild><Link href={`/audit/${id}/checkout`}>Go to payment</Link></Button>
       </div>
     )
@@ -68,6 +72,7 @@ export function DeliveryPanel({ id }: { id: string }) {
         <h1 className="text-3xl font-semibold tracking-tight">Prep pack</h1>
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
         <p className="text-sm">Order status: {ORDER_LABEL[audit.order.status]}. The crawl and the prep pack are kept for {audit.retentionDays} days, deleted at {audit.expiresAt}, and are not stored forever.</p>
+        {audit.skuCapNote ? <p className="text-sm">{audit.skuCapNote}</p> : null}
         <Disclaimer compact />
       </div>
       {audit.incompleteRowCount > 0 ? (

@@ -1,58 +1,64 @@
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises"
-import path from "node:path"
 import type { AuditRecord } from "@/lib/audit/types"
-import { getConfig } from "@/lib/config"
+import { createDurableRepository } from "@/lib/store/durable"
+import { createFilesystemRepository } from "@/lib/store/filesystem"
+import { createLazyNeonMetadata, databaseUrl } from "@/lib/store/postgres"
+import { assertAuditId } from "@/lib/store/audits-id"
+import type { AuditRepository } from "@/lib/store/repository"
+import { blobEnvReady, createVercelObjectStore } from "@/lib/store/vercel-blob"
 
-const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const locks = new Map<string, Promise<unknown>>()
+const filesystem = createFilesystemRepository()
+let override: AuditRepository | null = null
+let production: AuditRepository | null = null
 
-export function assertAuditId(id: string): string {
-  if (!ID_RE.test(id)) throw new Error("bad id")
-  return id
+export { assertAuditId }
+
+export function durableEnvReady(): boolean {
+  return blobEnvReady() && Boolean(databaseUrl())
 }
 
-function dirFor(id: string): string {
-  return path.join(getConfig().dataDir, "audits", assertAuditId(id))
+export function activeRepository(): AuditRepository {
+  if (override) return override
+  if (durableEnvReady()) {
+    production ??= createDurableRepository({
+      metadata: createLazyNeonMetadata(),
+      objects: createVercelObjectStore(),
+    })
+    return production
+  }
+  return filesystem
+}
+
+export function setAuditStoreForTests(store: AuditRepository | null): void {
+  override = store
+  production = null
+}
+
+export function paidStorageBlocker(): string | null {
+  if (activeRepository().kind === "durable") return null
+  const blob = blobEnvReady()
+  const database = Boolean(databaseUrl())
+  if (!blob && !database) {
+    return "Paid checkout cannot start because packs are still stored on the local filesystem (PREP_DATA_DIR). That disk is wiped on a Vercel deploy. Set BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID for a private Vercel Blob store, and DATABASE_URL for order metadata. No PayPal order was created."
+  }
+  if (!blob) {
+    return "Paid checkout cannot start because BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID is missing. Pack files would not survive a deploy. No PayPal order was created."
+  }
+  return "Paid checkout cannot start because DATABASE_URL is missing. Order status would not survive a deploy. No PayPal order was created."
 }
 
 export async function writeAudit(audit: AuditRecord): Promise<void> {
-  const dir = dirFor(audit.id)
-  await mkdir(dir, { recursive: true })
-  const file = path.join(dir, "audit.json")
-  const tmp = path.join(dir, "audit.json.tmp")
-  await writeFile(tmp, JSON.stringify(audit), "utf8")
-  await rename(tmp, file)
+  await activeRepository().writeAudit(audit)
 }
 
 export async function readAudit(id: string): Promise<AuditRecord | null> {
-  try {
-    assertAuditId(id)
-  } catch {
-    return null
-  }
-  await purgeExpired()
-  try {
-    const raw = await readFile(path.join(dirFor(id), "audit.json"), "utf8")
-    return JSON.parse(raw) as AuditRecord
-  } catch {
-    return null
-  }
+  return activeRepository().readAudit(id)
 }
 
 export async function updateAudit(
   id: string,
   mutate: (audit: AuditRecord) => AuditRecord | Promise<AuditRecord>,
 ): Promise<AuditRecord> {
-  const previous = locks.get(id) ?? Promise.resolve()
-  const run = previous.catch(() => undefined).then(async () => {
-    const current = await readAudit(id)
-    if (!current) throw new Error("missing")
-    const next = await mutate(current)
-    await writeAudit(next)
-    return next
-  })
-  locks.set(id, run)
-  return run
+  return activeRepository().updateAudit(id, mutate)
 }
 
 export async function writeVersionFiles(
@@ -61,52 +67,26 @@ export async function writeVersionFiles(
   files: Record<string, string>,
   zip: Buffer,
 ): Promise<void> {
-  const dir = path.join(dirFor(id), `v${version}`)
-  await mkdir(dir, { recursive: true })
-  await Promise.all(
-    Object.entries(files).map(([name, contents]) => writeFile(path.join(dir, name), contents, "utf8")),
-  )
-  await writeFile(path.join(dir, "pack.zip"), zip)
+  await activeRepository().writeVersionFiles(id, version, files, zip)
 }
 
 export async function readVersionFile(id: string, version: number, name: string): Promise<Buffer | null> {
-  if (!Number.isInteger(version) || version < 1) return null
-  if (name !== "pack.zip" && !/^0[0-4]-[a-z0-9.-]+$/.test(name)) return null
-  try {
-    return await readFile(path.join(dirFor(id), `v${version}`, name))
-  } catch {
-    return null
-  }
+  return activeRepository().readVersionFile(id, version, name)
 }
 
-async function purgeExpired(): Promise<void> {
-  const root = path.join(getConfig().dataDir, "audits")
-  let entries: string[] = []
-  try {
-    entries = await readdir(root)
-  } catch {
-    return
-  }
-  const now = Date.now()
-  await Promise.all(
-    entries.map(async (entry) => {
-      if (!ID_RE.test(entry)) return
-      try {
-        const raw = await readFile(path.join(root, entry, "audit.json"), "utf8")
-        const audit = JSON.parse(raw) as AuditRecord
-        if (Date.parse(audit.expiresAt) <= now) await rm(path.join(root, entry), { recursive: true, force: true })
-      } catch {
-        /* ignore unreadable folders */
-      }
-    }),
-  )
+export async function rememberCapture(captureId: string, auditId: string): Promise<void> {
+  await activeRepository().rememberCapture(captureId, auditId)
+}
+
+export async function auditIdForCapture(captureId: string): Promise<string | null> {
+  return activeRepository().auditIdForCapture(captureId)
 }
 
 export function logEvent(event: string, fields: Record<string, string | number | boolean | undefined>): void {
   const safe: Record<string, string | number | boolean> = {}
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined) continue
-    if (/password|otp|passcode|cvv|pan|card|secret|ssn|证件/i.test(key)) continue
+    if (/password|otp|passcode|cvv|pan|card|secret|ssn|webhook|sig|token|证件/i.test(key)) continue
     if (typeof value === "string" && /\b(?:\d[ -]*?){13,19}\b/.test(value)) continue
     safe[key] = value
   }

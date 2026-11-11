@@ -104,7 +104,11 @@ export type ScoreResult = {
 
 export type Eligibility = { agent: string; local: string; market: string }
 
-export type OrderStatus = "pending" | "paid" | "delivered" | "failed"
+export type OrderStatus = "pending" | "paid" | "delivered" | "failed" | "refunded"
+
+export function orderUnlocksPack(status: OrderStatus): boolean {
+  return status === "paid" || status === "delivered"
+}
 
 export type PriceBreakdown = {
   baseCents: number
@@ -117,7 +121,7 @@ export type PriceBreakdown = {
   overageCents: number
   totalCents: number
   priceEnvSet: boolean
-  mode: "simulated"
+  mode: "simulated" | "paypal"
 }
 
 export type Order = {
@@ -126,6 +130,15 @@ export type Order = {
   chargedCents: number | null
   paidAt?: string
   failureReason?: string
+  paypalOrderId?: string
+  paypalInvoiceId?: string
+  paypalCaptureId?: string
+  paypalAmountCents?: number
+  paypalCurrency?: string
+  paypalAwaitingWebhook?: boolean
+  settledCaptureIds?: string[]
+  blockedCaptureIds?: string[]
+  refundedAt?: string
 }
 
 export type VersionMeta = {

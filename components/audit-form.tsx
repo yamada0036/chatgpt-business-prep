@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Disclaimer } from "@/components/disclaimer"
 
-export function AuditForm() {
+export function AuditForm({ showFixtures = false }: { showFixtures?: boolean }) {
   const router = useRouter()
   const [storeUrl, setStoreUrl] = useState("")
   const [email, setEmail] = useState("")
@@ -62,22 +62,24 @@ export function AuditForm() {
               className="h-11"
             />
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStoreUrl(`${window.location.origin}/fixtures/incomplete`)}
-            >
-              Use incomplete fixture
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStoreUrl(`${window.location.origin}/fixtures/complete`)}
-            >
-              Use complete fixture
-            </Button>
-          </div>
+          {showFixtures ? (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStoreUrl(`${window.location.origin}/fixtures/incomplete`)}
+              >
+                Use incomplete fixture
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStoreUrl(`${window.location.origin}/fixtures/complete`)}
+              >
+                Use complete fixture
+              </Button>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="product_file">Product sheet (optional, CSV or XLSX)</Label>
             <Input

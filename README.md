@@ -1,6 +1,6 @@
 # Prep
 
-A preparation site for merchants who want to claim a business in ChatGPT. It checks public pages and an optional product spreadsheet against the official profile fields and the OpenAI discovery product feed, shows a free audit, and — after a simulated payment — downloads a prep pack the merchant submits themselves.
+A preparation site for merchants who want to claim a business in ChatGPT. It checks public pages and an optional product spreadsheet against the official profile fields and the OpenAI discovery product feed, shows a free audit, and — after a verified PayPal capture — downloads a prep pack the merchant submits themselves.
 
 This tool does not claim the business, sign in to ChatGPT or Business Hub, collect identity documents, or promise ranking or approval.
 
@@ -20,32 +20,59 @@ npm run lint
 
 ## Where config lives
 
-Prices, SKU allowance, crawl caps, and retention are environment variables. Copy `.env.example` to `.env.local`. Nothing in the UI treats a made-up number as a decided live price.
+Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environment variables. Copy `.env.example` to `.env.local`. Do not put real secrets in the repo.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PREP_BASE_PRICE_CENTS` | `0` (unset) | Base pack price in cents. Unset or `0` is an unpriced test configuration. |
-| `PREP_CURRENCY` | `USD` | ISO currency shown next to the amount. |
-| `PREP_INCLUDED_SKUS` | `50` | Product rows included before overage. |
-| `PREP_OVERAGE_BLOCK_SIZE` | `50` | Extra rows per overage block. `0` or less disables overage. |
-| `PREP_OVERAGE_BLOCK_PRICE_CENTS` | `0` | Price of one overage block. |
+| `PREP_BASE_PRICE_CENTS` | `4900` | Base pack price in cents. `$49.00` USD. |
+| `PREP_CURRENCY` | `USD` | ISO currency shown next to the amount and sent to PayPal. |
+| `PREP_INCLUDED_SKUS` | `50` | Product rows included in the paid pack. |
+| `PREP_OVERAGE_BLOCK_SIZE` | `50` | Extra rows per overage block. Unused while the overage price is `0`. |
+| `PREP_OVERAGE_BLOCK_PRICE_CENTS` | `0` | No SKU overage charge. Larger catalogs still pay the base price. |
 | `PREP_MAX_PRODUCT_PAGES` | `30` | Product detail pages fetched per audit. |
 | `PREP_MAX_INFO_PAGES` | `8` | About / policy / contact pages. |
 | `PREP_MAX_VARIANTS_PER_PRODUCT` | `40` | Variants kept per product. The rest are reported, not dropped silently. |
-| `PREP_MAX_FEED_ROWS` | `1000` | Uploaded sheet rows kept. The omitted count is shown. |
+| `PREP_MAX_FEED_ROWS` | `1000` | Uploaded sheet rows kept for the audit. The omitted count is shown. |
 | `PREP_AUDIT_BUDGET_MS` | `110000` | Stop crawling and return the finished part. |
 | `PREP_FETCH_TIMEOUT_MS` | `12000` | Per-request timeout. |
 | `PREP_RETENTION_DAYS` | `30` | Then the audit, crawl extract, and packs are deleted. |
-| `PREP_ALLOW_LOOPBACK` | on | Lets the local fixture stores be crawled. Set `false` if this process is exposed. |
-| `PREP_DATA_DIR` | `./data` | Audits and generated files. Gitignored. |
+| `PREP_ALLOW_LOOPBACK` | on locally | Lets local fixture stores be crawled. Forced off when `PAYPAL_ENV=live` or when a production deploy has a price. |
+| `PREP_DATA_DIR` | `./data` | Local filesystem store only. Gitignored. Not used for paid checkout once Blob and `DATABASE_URL` are set. |
+| `PAYPAL_CLIENT_ID` | empty | PayPal REST app client id. Public in the browser. The secret never is. |
+| `PAYPAL_CLIENT_SECRET` | empty | PayPal REST app secret. Server only. |
+| `PAYPAL_WEBHOOK_ID` | empty | Id of the webhook registered in the PayPal app. Required before checkout can start. |
+| `PAYPAL_ENV` | `sandbox` | `sandbox` or `live`. Only `live` talks to the live API. |
+| `BLOB_READ_WRITE_TOKEN` | empty | Private Vercel Blob read/write token. |
+| `BLOB_STORE_ID` | empty | Private Blob store id when the deployment uses Vercel OIDC instead of a token. |
+| `DATABASE_URL` | empty | Postgres connection string for order and audit metadata. |
+| `PREP_PUBLIC_URL` | empty | Optional origin for PayPal return and cancel URLs. |
 
-Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order at the moment of simulated payment, so the figure on the page and the recorded charge use the same function.
+Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order. PayPal is created with that same `amountCents` and currency. The webhook accepts the capture only when the amount and currency still match.
 
-## Simulated checkout
+## PayPal Checkout
 
-v1 does not talk to a payment provider and never renders a card form. The checkout buttons are labeled as tests. "Confirm simulated payment (test)" marks the order paid and unlocks the pack for the amount currently configured. "Simulate a failed payment (test)" sets the order to failed and does not create files.
+The buyer pays on PayPal. This site does not render a card form and does not collect card numbers, bank details, or a PayPal password.
 
-A later provider should create a hosted checkout for that same `amountCents` and currency, then mark the order paid from a verified webhook. The seam is `lib/audit/checkout.ts`. Do not collect card numbers, CVC, or one-time codes in this app. v1 also does not send the contact email; it is stored only so the gate can be tested.
+Checkout creates the order on the server with the Orders API, `intent: CAPTURE`. After approval, the server captures the order. That capture response and the return URL do not unlock the pack. The pack is published only from `fulfillVerifiedCapture` in `lib/audit/checkout.ts`, and only after `POST /api/paypal/webhook` verifies the signature and the capture is `COMPLETED` for the same order id, amount, and currency.
+
+If storage is not durable, paid checkout returns an error and does not create a PayPal order. Local development without PayPal credentials can still use the labeled simulated buttons. Those buttons are refused when PayPal credentials are set, when `PAYPAL_ENV=live`, and on a production deployment that has a price. Homepage fixture buttons are hidden in production and whenever `PAYPAL_ENV=live`.
+
+A catalog with more than 50 product rows still costs $49. The paid CSV includes the first 50. The audit page, checkout page, delivery page, and `00-readme.md` say that the rest are not in the pack.
+
+### Sandbox
+
+1. In the PayPal developer dashboard, create a sandbox REST app and copy the client id and secret into `.env.local`.
+2. Set `PAYPAL_ENV=sandbox`, `PREP_BASE_PRICE_CENTS=4900`, and `PREP_CURRENCY=USD`.
+3. Set `BLOB_READ_WRITE_TOKEN` (or `BLOB_STORE_ID` on Vercel) and `DATABASE_URL`. Checkout will not start without them.
+4. Run the app on a URL PayPal can reach. For local sandbox, expose it with a tunnel and set `PREP_PUBLIC_URL` to that origin.
+5. In the sandbox app, add a webhook. The URL to register is `https://<your-domain>/api/paypal/webhook`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.REFUNDED`, and `PAYMENT.CAPTURE.REVERSED`.
+6. Copy the webhook id into `PAYPAL_WEBHOOK_ID`.
+7. Run an audit, pay with a sandbox personal account, and return to `/audit/<id>/checkout/return`. The pack stays locked until the webhook is verified. Then the delivery page can download the zip.
+8. Opening the return URL, or calling the capture route, without that webhook does not unlock the download.
+
+### Live
+
+Create a live REST app. Set `PAYPAL_ENV=live`, replace the client id, secret, and webhook id with the live values, and register the same path on the live app: `https://<your-production-domain>/api/paypal/webhook`. Confirm Blob and `DATABASE_URL` are set on that deployment. `PREP_ALLOW_LOOPBACK` is forced off in this mode. Redeploy only after those values are in the host's environment, not in git.
 
 ## What the merchant gets
 
@@ -62,7 +89,7 @@ Empty required cells stay empty. Unknown stock is the official value `unknown`, 
 
 ## Local fixtures
 
-On the home page, use the buttons that fill these URLs (same host and port as the app):
+On a local or preview sandbox deploy, the home page shows buttons that fill these URLs (same host and port as the app). Production and `PAYPAL_ENV=live` hide those buttons.
 
 - `/fixtures/incomplete` — public shop with no brand, price, or return policy
 - `/fixtures/complete` — profile, policies, and two variants
@@ -88,7 +115,7 @@ On the home page, use the buttons that fill these URLs (same host and port as th
 1. Paste `/fixtures/complete` (or any public store) with no file. The free audit lists each profile field as Ready / Missing / Needs input / Conflict.
 2. Upload a CSV that shares `item_id` with a crawled product but disagrees on `price`. The issues file records `conflict` and the feed cell is empty. Covered by `tests/prep.test.ts`.
 3. Before payment, `GET /api/audits/:id/download` returns 403. The free JSON has no full profile draft and no full product description.
-4. After simulated payment, the zip contains the five required files. With the agent box on, it also contains `04-agent-pack.md`; otherwise that name is absent.
+4. After a verified PayPal capture webhook, the zip contains the five required files. With the agent box on, it also contains `04-agent-pack.md`; otherwise that name is absent. The return URL alone does not unlock it.
 5. Feed headers are the official English names. `price` looks like `18.00 USD`. A non-empty `availability` is one of the five official values.
 6. Run `/fixtures/incomplete`. Brand and price cells are empty. The return policy is empty or Needs input / Missing, not an invented policy.
 7. Run `/fixtures/login`. The report says Not fetched and does not say the policy does not exist.
