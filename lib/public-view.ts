@@ -1,8 +1,11 @@
 import type { AuditRecord, SupplementTarget } from "@/lib/audit/types"
+import { orderUnlocksPack } from "@/lib/audit/types"
 import { profileCounts } from "@/lib/audit/score"
 import { excerpt } from "@/lib/audit/profile"
 import { FEED_FIELDS, REQUIRED_FEED_FIELDS } from "@/lib/official/spec"
 import { incompleteRowCount } from "@/lib/feed/finalize"
+import { packScope } from "@/lib/pack/scope"
+import { paidCheckoutState, type PaidState } from "@/lib/paypal/ready"
 
 export type PublicAudit = {
   id: string
@@ -43,10 +46,13 @@ export type PublicAudit = {
   incompleteRowCount: number
   supplements: SupplementTarget[]
   paid: boolean
+  skuCapNote: string
+  paidCheckout: PaidState
 }
 
 export function toPublicAudit(audit: AuditRecord): PublicAudit {
-  const paid = audit.order.status === "paid" || audit.order.status === "delivered"
+  const paid = orderUnlocksPack(audit.order.status)
+  const scope = packScope(audit)
   return {
     id: audit.id,
     status: audit.status,
@@ -92,9 +98,11 @@ export function toPublicAudit(audit: AuditRecord): PublicAudit {
         ? { headers: audit.upload.headers, fields: [...FEED_FIELDS] }
         : undefined,
     versions: paid ? audit.versions : [],
-    incompleteRowCount: incompleteRowCount(audit.feedRows),
+    incompleteRowCount: incompleteRowCount(scope.rows),
     supplements: paid ? supplementTargets(audit) : [],
     paid,
+    skuCapNote: scope.note,
+    paidCheckout: paidCheckoutState(),
   }
 }
 

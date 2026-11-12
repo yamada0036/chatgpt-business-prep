@@ -1,4 +1,13 @@
 import path from "node:path"
+import {
+  allowSimulatedPay,
+  checkoutMode,
+  isTakingRealMoney,
+  paypalEnvironment,
+  showFixtureButtons,
+  type CheckoutMode,
+  type PayPalEnvironment,
+} from "@/lib/site-mode"
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name]
@@ -26,13 +35,18 @@ export type AppConfig = {
   maxUploadBytes: number
   allowLoopback: boolean
   dataDir: string
-  checkoutMode: "simulated"
+  checkoutMode: CheckoutMode
+  paypalEnv: PayPalEnvironment
+  allowSimulatedPay: boolean
+  showFixtures: boolean
 }
 
 export function getConfig(): AppConfig {
   const currency = (process.env.PREP_CURRENCY || "USD").trim().toUpperCase()
+  const basePriceCents = Math.max(0, envInt("PREP_BASE_PRICE_CENTS", 0))
+  const takingRealMoney = isTakingRealMoney(basePriceCents)
   return {
-    basePriceCents: Math.max(0, envInt("PREP_BASE_PRICE_CENTS", 0)),
+    basePriceCents,
     priceEnvSet: Boolean(process.env.PREP_BASE_PRICE_CENTS?.trim()),
     currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD",
     includedSkus: Math.max(0, envInt("PREP_INCLUDED_SKUS", 50)),
@@ -47,8 +61,11 @@ export function getConfig(): AppConfig {
     maxBytes: Math.max(50_000, envInt("PREP_MAX_PAGE_BYTES", 1_500_000)),
     retentionDays: Math.max(1, envInt("PREP_RETENTION_DAYS", 30)),
     maxUploadBytes: Math.max(10_000, envInt("PREP_MAX_UPLOAD_BYTES", 5_000_000)),
-    allowLoopback: process.env.PREP_ALLOW_LOOPBACK !== "false",
+    allowLoopback: takingRealMoney ? false : process.env.PREP_ALLOW_LOOPBACK !== "false",
     dataDir: process.env.PREP_DATA_DIR || path.join(process.cwd(), "data"),
-    checkoutMode: "simulated",
+    checkoutMode: checkoutMode(),
+    paypalEnv: paypalEnvironment(),
+    allowSimulatedPay: allowSimulatedPay(basePriceCents),
+    showFixtures: showFixtureButtons(),
   }
 }

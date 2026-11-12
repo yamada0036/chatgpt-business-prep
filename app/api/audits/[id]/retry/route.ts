@@ -1,5 +1,5 @@
 import { enqueueAudit } from "@/lib/audit/run"
-import { emptyScore, emptySummary, initialSteps } from "@/lib/audit/types"
+import { emptyScore, emptySummary, initialSteps, orderUnlocksPack } from "@/lib/audit/types"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
 import { readAudit, updateAudit } from "@/lib/store/audits"
 
@@ -7,7 +7,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   const { id } = await context.params
   const audit = await readAudit(id)
   if (!audit) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
-  if (audit.order.status === "paid" || audit.order.status === "delivered") {
+  if (orderUnlocksPack(audit.order.status)) {
     return Response.json({ error: { code: "paid", message: "A delivered prep pack gets a new version from supplemented fields. The whole order is not crawled again." } }, { status: 409 })
   }
   await updateAudit(id, (current) => ({
@@ -27,6 +27,16 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     urgent: [],
     score: emptyScore(),
     partialReason: undefined,
+    order:
+      current.order.status === "pending" || current.order.status === "failed" || current.order.status === "refunded"
+        ? {
+            status: "pending",
+            breakdown: current.order.breakdown,
+            chargedCents: null,
+            blockedCaptureIds: current.order.blockedCaptureIds,
+            settledCaptureIds: current.order.settledCaptureIds,
+          }
+        : current.order,
   }))
   enqueueAudit(id)
   return Response.json({ id })

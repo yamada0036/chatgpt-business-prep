@@ -1,4 +1,5 @@
 import { SCORE_EXPLANATION, OFFICIAL_LINKS, DISCLAIMER_BLOCKS } from "@/lib/official/spec"
+import { showFixtureButtons } from "@/lib/site-mode"
 
 export default function HelpPage() {
   return (
@@ -8,13 +9,15 @@ export default function HelpPage() {
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">Default limits</h2>
         <p className="leading-7 text-muted-foreground">
-          A free audit fetches at most 30 product pages by default, and a paid pack keeps at most 1,000 rows from an uploaded sheet. Rows past that cap are counted on the page and in the readme. They are not dropped silently. An audit stops after about 110 seconds by default, returns the part that finished, and can be retried. Crawl results and prep packs are kept for 30 days, then deleted. These numbers are environment variables. See the README.
+          A free audit fetches at most 30 product pages by default, and an uploaded sheet is read up to 1,000 rows. The paid pack includes the first 50 product rows when there is no overage price. Rows past either cap are counted and are not dropped silently. An audit stops after about 110 seconds by default, returns the part that finished, and can be retried. Crawl results and prep packs are kept for 30 days, then deleted. These numbers are environment variables. See the README.
         </p>
       </section>
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">Local fixtures</h2>
         <p className="leading-7 text-muted-foreground">
-          On this site&apos;s host and port, build a full URL from <code>/fixtures/incomplete</code>, <code>/fixtures/complete</code>, <code>/fixtures/login</code>, or <code>/fixtures/brochure</code> and run an audit. The incomplete fixture has no brand, price, or return policy on purpose.
+          {showFixtureButtons()
+            ? "On this site's host and port, build a full URL from /fixtures/incomplete, /fixtures/complete, /fixtures/login, or /fixtures/brochure and run an audit. The incomplete fixture has no brand, price, or return policy on purpose."
+            : "Fixture store buttons are hidden on this public site. Use a store URL you control."}
         </p>
       </section>
       <section className="space-y-2">

@@ -5,11 +5,12 @@ import { getConfig } from "@/lib/config"
 import { parseProductFile } from "@/lib/feed/parse-upload"
 import { quotePrice } from "@/lib/pricing"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
-import { logEvent, writeAudit } from "@/lib/store/audits"
+import { logEvent, StorageError, writeAudit } from "@/lib/store/audits"
 import { looksLikeEmail } from "@/lib/text"
 import { UrlError, assertPublicUrl } from "@/lib/url-safety"
 
 export const dynamic = "force-dynamic"
+export const maxDuration = 120
 
 export async function POST(request: Request) {
   const form = await request.formData()
@@ -71,7 +72,16 @@ export async function POST(request: Request) {
     versions: [],
     upload,
   }
-  await writeAudit(audit)
+  try {
+    await writeAudit(audit)
+  } catch (error) {
+    const message =
+      error instanceof StorageError
+        ? error.message
+        : "The audit could not be saved. Nothing was stored. Try again in a moment."
+    logEvent("audit_create_failed", { code: error instanceof Error ? error.name : "error" })
+    return Response.json({ error: { code: "storage", message } }, { status: 503 })
+  }
   logEvent("audit_created", { id: audit.id, feed: includeProductFeed, agent: includeAgentPack, rows: upload?.records.length ?? 0 })
   enqueueAudit(audit.id)
   return Response.json({ id: audit.id })

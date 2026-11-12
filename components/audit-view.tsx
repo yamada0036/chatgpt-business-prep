@@ -216,11 +216,18 @@ function Results({ audit }: { audit: PublicAudit }) {
         <CardContent className="space-y-3 text-sm leading-6">
           <p>The full pack includes 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off.</p>
           <p>
-            {audit.order.breakdown.priceEnvSet ? "The price comes from environment variables." : "A live price has not been set, so this is calculated as 0 to exercise the payment gate."}
-            {" "}This is a test configuration, not a decided live price. The base pack is {formatCents(audit.order.breakdown.baseCents, audit.order.breakdown.currency)} and includes {audit.order.breakdown.includedSkus} rows.
-            This run has {audit.order.breakdown.rowCount} rows, {audit.order.breakdown.overageBlocks} overage blocks, and {price} due. Simulated payment records that same amount.
+            {audit.order.breakdown.priceEnvSet
+              ? "The price comes from the site configuration. Checkout charges this same amount."
+              : "A live price has not been set, so this is calculated as 0 and live checkout stays closed."}
+            {" "}The base pack is {formatCents(audit.order.breakdown.baseCents, audit.order.breakdown.currency)} and includes {audit.order.breakdown.includedSkus} rows.
+            This run has {audit.order.breakdown.rowCount} rows and {price} due.
           </p>
-          <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>See the amount due and simulate payment</Link></Button>
+          {audit.skuCapNote ? <p>{audit.skuCapNote}</p> : null}
+          {audit.paidCheckout === "coming_soon" ? (
+            <p>Paid checkout is coming soon. The free audit on this page is ready to use.</p>
+          ) : (
+            <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>Continue to payment</Link></Button>
+          )}
         </CardContent>
       </Card>
     </>

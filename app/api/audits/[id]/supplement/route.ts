@@ -1,5 +1,6 @@
 import { publishVersion } from "@/lib/audit/checkout"
 import { applySupplement } from "@/lib/audit/supplement"
+import { orderUnlocksPack } from "@/lib/audit/types"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
 import { toPublicAudit } from "@/lib/public-view"
 import { readAudit, updateAudit } from "@/lib/store/audits"
@@ -8,7 +9,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params
   const existing = await readAudit(id)
   if (!existing) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
-  if (existing.order.status !== "paid" && existing.order.status !== "delivered") {
+  if (!orderUnlocksPack(existing.order.status)) {
     return Response.json({ error: { code: "unpaid", message: ERROR_MESSAGES.unpaid } }, { status: 403 })
   }
   const body = (await request.json()) as { updates?: { key: string; value: string }[] }
