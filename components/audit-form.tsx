@@ -121,7 +121,7 @@ export function AuditForm({ showFixtures = false }: { showFixtures?: boolean }) 
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="contact_email">Contact email (required before payment; you can leave it blank for now)</Label>
+            <Label htmlFor="contact_email">Contact email (optional for the free audit)</Label>
             <Input
               id="contact_email"
               name="contact_email"

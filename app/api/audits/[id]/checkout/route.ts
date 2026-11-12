@@ -21,7 +21,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return Response.json(toPublicAudit(audit))
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payment did not finish."
-    const status = message.startsWith("Simulated payment is disabled") ? 403 : 400
+    const status = message.startsWith("Simulated payment is disabled") || message.startsWith("Paid checkout is not available") ? 403 : 400
     return Response.json({ error: { code: "checkout", message } }, { status })
   }
 }

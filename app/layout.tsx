@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Prep · ChatGPT business setup",
-  description: "Check what a public store and product feed are missing. Start with a free audit, then download a prep pack after payment. This tool does not claim the business and does not promise a recommendation.",
+  description: "Check what a public store and product feed are missing. Start with a free audit. This tool does not claim the business and does not promise a recommendation.",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

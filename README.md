@@ -51,6 +51,8 @@ Official field names, availability enums, excluded Ads/Checkout columns, claim s
 
 ## PayPal Checkout
 
+Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the intended USD 9.90 trial or USD 49.90 monthly price. The webhook route still exists and does not fulfill an order while checkout is off.
+
 The buyer pays on PayPal. This site does not render a card form and does not collect card numbers, bank details, or a PayPal password.
 
 Checkout creates the order on the server with the Orders API, `intent: CAPTURE`. After approval, the server captures the order. That capture response and the return URL do not unlock the pack. The pack is published only from `fulfillVerifiedCapture` in `lib/audit/checkout.ts`, and only after `POST /api/paypal/webhook` verifies the signature and the capture is `COMPLETED` for the same order id, amount, and currency.

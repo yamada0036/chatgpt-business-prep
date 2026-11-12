@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Disclaimer } from "@/components/disclaimer"
+import { IntendedOffer } from "@/components/intended-offer"
 import { PayPalButtons } from "@/components/paypal-buttons"
 import type { PublicAudit } from "@/lib/public-view"
 
@@ -19,7 +20,7 @@ type CheckoutConfig = {
   showSimulatedPay: boolean
   ready: boolean
   blocker: string
-  paidState: "ready" | "simulated" | "coming_soon" | "unavailable"
+  paidState: "ready" | "simulated" | "coming_soon" | "unavailable" | "not_for_sale"
 }
 
 const ORDER_LABEL = {
@@ -72,12 +73,22 @@ export function CheckoutPanel({
 
   if (!audit || !config) return <p className="text-sm text-muted-foreground">Loading the order…</p>
   if (!audit.order) return <p className="text-sm">This order could not be loaded.</p>
+  if (config.paidState === "not_for_sale" || config.paidState === "coming_soon") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Prep checkout</h1>
+        <Disclaimer compact />
+        <IntendedOffer showPricingLink />
+        <p className="text-sm leading-6">This page does not collect card numbers, bank details, or a PayPal password.</p>
+      </div>
+    )
+  }
   if (audit.status !== "complete" && audit.status !== "partial" && audit.order.status === "pending") {
     return <p className="text-sm">The audit is not finished, so payment is not open yet.</p>
   }
   const quote = audit.order.breakdown
   const shown = money(quote.totalCents, quote.currency)
-  const comingSoon = config.paidState === "coming_soon"
+  const comingSoon = false
 
   async function pay(action: "pay" | "fail") {
     setPending(true)

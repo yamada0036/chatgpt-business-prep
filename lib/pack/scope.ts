@@ -1,5 +1,4 @@
 import type { AuditRecord, FeedIssue, FeedRow } from "@/lib/audit/types"
-import { formatCents } from "@/lib/pricing"
 
 export type PackScope = {
   rows: FeedRow[]
@@ -23,7 +22,7 @@ export function packScope(audit: AuditRecord): PackScope {
   const omitted = rows.length - kept.length
   const note =
     omitted > 0
-      ? `This catalog has ${rows.length} product rows. The prep pack includes the first ${cap}. The other ${omitted} are not in the paid pack. The price stays ${formatCents(breakdown.totalCents, breakdown.currency)}. This version does not add a charge for extra SKUs.`
+      ? `This catalog has ${rows.length} product rows. The prep pack includes the first ${cap}. The other ${omitted} are not in the paid pack. This version does not add a charge for extra SKUs.`
       : ""
   return { rows: kept, issues, omitted, note }
 }

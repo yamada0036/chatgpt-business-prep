@@ -9,12 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Disclaimer } from "@/components/disclaimer"
+import { IntendedOffer } from "@/components/intended-offer"
 import type { PublicAudit } from "@/lib/public-view"
-
-function formatCents(cents: number, currency: string): string {
-  const abs = Math.abs(cents)
-  return `${cents < 0 ? "-" : ""}${currency} ${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`
-}
 
 const DISPLAY: Record<string, string> = {
   ready: "Ready",
@@ -112,7 +108,6 @@ async function retry(id: string) {
 }
 
 function Results({ audit }: { audit: PublicAudit }) {
-  const price = formatCents(audit.order.breakdown.totalCents, audit.order.breakdown.currency)
   return (
     <>
       <Card>
@@ -214,20 +209,10 @@ function Results({ audit }: { audit: PublicAudit }) {
           <CardTitle>One-store prep pack</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-6">
-          <p>The full pack includes 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off.</p>
-          <p>
-            {audit.order.breakdown.priceEnvSet
-              ? "The price comes from the site configuration. Checkout charges this same amount."
-              : "A live price has not been set, so this is calculated as 0 and live checkout stays closed."}
-            {" "}The base pack is {formatCents(audit.order.breakdown.baseCents, audit.order.breakdown.currency)} and includes {audit.order.breakdown.includedSkus} rows.
-            This run has {audit.order.breakdown.rowCount} rows and {price} due.
-          </p>
+          <p>The free audit does not include the full prep files. Those files are 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off.</p>
+          <p>This run counted {audit.order.breakdown.rowCount} product rows.</p>
           {audit.skuCapNote ? <p>{audit.skuCapNote}</p> : null}
-          {audit.paidCheckout === "coming_soon" ? (
-            <p>Paid checkout is coming soon. The free audit on this page is ready to use.</p>
-          ) : (
-            <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>Continue to payment</Link></Button>
-          )}
+          <IntendedOffer />
         </CardContent>
       </Card>
     </>

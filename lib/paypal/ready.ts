@@ -12,14 +12,10 @@ export function checkoutBlocker(): string | null {
   return null
 }
 
-export type PaidState = "ready" | "simulated" | "coming_soon" | "unavailable"
+export type PaidState = "ready" | "simulated" | "coming_soon" | "unavailable" | "not_for_sale"
 
 export function paidCheckoutState(): PaidState {
-  if (!paypalClientId() || !paypalClientSecret()) {
-    if (process.env.VERCEL) return "coming_soon"
-    return getConfig().allowSimulatedPay ? "simulated" : "coming_soon"
-  }
-  return checkoutBlocker() ? "unavailable" : "ready"
+  return "not_for_sale"
 }
 
 export type PublicCheckoutConfig = {
