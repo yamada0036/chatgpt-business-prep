@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic"
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
+  try {
   let audit = await readAudit(id)
   if (!audit) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
   const interruptedAfter = getConfig().auditBudgetMs + 15_000
@@ -26,4 +27,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     }
   }
   return Response.json(toPublicAudit(audit))
+  } catch {
+    return Response.json(
+      { error: { code: "storage", message: "The audit could not be read. Try again in a moment." } },
+      { status: 503 },
+    )
+  }
 }

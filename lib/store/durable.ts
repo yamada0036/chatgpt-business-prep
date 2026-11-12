@@ -127,7 +127,7 @@ export function createDurableRepository(deps: {
         const saved = await deps.metadata.compareAndSwap(id, next, current.generation)
         if (saved) return next
       }
-      throw new Error("The order was saved by another request. Retry.")
+      throw new Error("The audit was updated at the same time. Retry.")
     },
     async writeVersionFiles(id, version, files, zip) {
       assertAuditId(id)

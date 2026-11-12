@@ -377,8 +377,9 @@ describe("PayPal checkout acceptance", () => {
 
     delete process.env.PAYPAL_CLIENT_ID
     delete process.env.PAYPAL_CLIENT_SECRET
-    process.env.VERCEL_ENV = "production"
-    process.env.PREP_BASE_PRICE_CENTS = "4900"
+    delete process.env.VERCEL_ENV
+    process.env.VERCEL = "1"
+    process.env.PREP_BASE_PRICE_CENTS = "0"
     expect(paidCheckoutState()).toBe("coming_soon")
 
     setAuditStoreForTests(null)

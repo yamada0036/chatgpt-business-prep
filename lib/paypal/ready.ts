@@ -16,6 +16,7 @@ export type PaidState = "ready" | "simulated" | "coming_soon" | "unavailable"
 
 export function paidCheckoutState(): PaidState {
   if (!paypalClientId() || !paypalClientSecret()) {
+    if (process.env.VERCEL) return "coming_soon"
     return getConfig().allowSimulatedPay ? "simulated" : "coming_soon"
   }
   return checkoutBlocker() ? "unavailable" : "ready"

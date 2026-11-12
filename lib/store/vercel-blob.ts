@@ -57,12 +57,19 @@ async function deleteBlobPrefix(prefix: string): Promise<void> {
 export function createVercelJsonBlob(): JsonBlob {
   return {
     async read(pathname) {
-      const { get } = await blobApi()
+      const { get, head } = await blobApi()
+      let etag = ""
+      try {
+        etag = (await head(pathname)).etag
+      } catch (error) {
+        if (missingBlob(error)) return null
+        throw error
+      }
       try {
         const result = await get(pathname, { access: "private", useCache: false })
         if (!result || result.statusCode !== 200 || !result.stream) return null
         const text = await new Response(result.stream).text()
-        return { text, etag: result.blob.etag }
+        return { text, etag }
       } catch (error) {
         if (missingBlob(error)) return null
         throw error

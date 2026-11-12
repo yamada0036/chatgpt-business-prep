@@ -15,14 +15,16 @@ export function isAuditRunning(id: string): boolean {
 export function enqueueAudit(id: string, crawlOptions?: CrawlOptions): void {
   const job = runAudit(id, crawlOptions)
     .catch((error) => {
-      const message = error instanceof Error ? error.message : "failed"
+      const message = error instanceof Error ? error.name : "failed"
       logEvent("audit_failed", { id, message })
       return updateAudit(id, (audit) => ({
         ...audit,
         status: "error",
         error: { code: "internal", message: "The audit did not finish. You can retry." },
         steps: audit.steps.map((step) => (step.state === "active" ? { ...step, state: "failed" } : step)),
-      })).then(() => undefined)
+      }))
+        .then(() => undefined)
+        .catch(() => undefined)
     })
     .finally(() => {
       jobs.delete(id)

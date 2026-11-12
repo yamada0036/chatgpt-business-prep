@@ -40,7 +40,10 @@ export function createMemoryJsonBlob(): JsonBlob {
 }
 
 function preconditionFailed(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && "name" in error && error.name === "BlobPreconditionFailedError")
+  if (!error || typeof error !== "object") return false
+  const name = "name" in error ? String(error.name) : ""
+  const message = "message" in error ? String(error.message) : ""
+  return name === "BlobPreconditionFailedError" || /precondition failed|etag mismatch/i.test(message)
 }
 
 export function createBlobMetadata(blobs: JsonBlob): MetadataStore {
