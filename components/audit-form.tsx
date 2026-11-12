@@ -33,7 +33,15 @@ export function AuditForm({ showFixtures = false }: { showFixtures?: boolean }) 
     body.set("output_language", language)
     if (file) body.set("product_file", file)
     const response = await fetch("/api/audits", { method: "POST", body })
-    const data = (await response.json()) as { id?: string; error?: { message: string } }
+    const text = await response.text()
+    let data: { id?: string; error?: { message: string } } = {}
+    if (text) {
+      try {
+        data = JSON.parse(text) as { id?: string; error?: { message: string } }
+      } catch {
+        data = {}
+      }
+    }
     setPending(false)
     if (!response.ok || !data.id) {
       setError(data.error?.message ?? "The audit did not start.")

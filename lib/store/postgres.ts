@@ -47,7 +47,7 @@ export function createPostgresMetadata(runner: SqlRunner): MetadataStore {
       )
       const row = rows[0]
       if (!row) return null
-      return { record: asRecord(row.payload), generation: Number(row.generation) }
+      return { record: asRecord(row.payload), generation: String(row.generation) }
     },
     async upsert(record) {
       await prepare()
@@ -72,7 +72,7 @@ export function createPostgresMetadata(runner: SqlRunner): MetadataStore {
              updated_at = NOW()
          WHERE id = $3 AND generation = $4
          RETURNING generation`,
-        [JSON.stringify(record), record.expiresAt, id, expectedGeneration],
+        [JSON.stringify(record), record.expiresAt, id, Number(expectedGeneration)],
       )
       return rows.length > 0
     },

@@ -354,10 +354,49 @@ describe("PayPal checkout acceptance", () => {
   it("refuses to take payment when durable storage is missing", async () => {
     setAuditStoreForTests(null)
     calls.length = 0
+    delete process.env.BLOB_READ_WRITE_TOKEN
+    delete process.env.BLOB_STORE_ID
     await expect(createPayPalCheckout({ id: randomUUID(), origin: "https://prep.example" })).rejects.toThrow(/Paid checkout cannot start/)
     expect(calls).toHaveLength(0)
-    process.env.BLOB_READ_WRITE_TOKEN = "token"
-    await expect(createPayPalCheckout({ id: randomUUID(), origin: "https://prep.example" })).rejects.toThrow(/DATABASE_URL/)
+  })
+
+  it("stores an audit in Blob without Postgres and returns a JSON error when storage is missing on Vercel", async () => {
+    const { createBlobMetadata, createMemoryJsonBlob } = await import("@/lib/store/blob-meta")
+    const { paidCheckoutState } = await import("@/lib/paypal/ready")
+    const { POST } = await import("@/app/api/audits/route")
+    const { StorageError, writeAudit: saveAudit } = await import("@/lib/store/audits")
+    const blobs = createMemoryJsonBlob()
+    const meta = createBlobMetadata(blobs)
+    const seeded = makeAudit()
+    await meta.upsert(seeded)
+    const loaded = await meta.get(seeded.id)
+    expect(loaded?.record.storeUrl).toBe(seeded.storeUrl)
+    expect(await meta.compareAndSwap(seeded.id, { ...seeded, contactEmail: "next@harbor.example" }, loaded!.generation)).toBe(true)
+    expect(await meta.compareAndSwap(seeded.id, seeded, loaded!.generation)).toBe(false)
+    expect(StorageError).toBeTruthy()
+
+    delete process.env.PAYPAL_CLIENT_ID
+    delete process.env.PAYPAL_CLIENT_SECRET
+    process.env.VERCEL_ENV = "production"
+    process.env.PREP_BASE_PRICE_CENTS = "4900"
+    expect(paidCheckoutState()).toBe("coming_soon")
+
+    setAuditStoreForTests(null)
+    delete process.env.BLOB_READ_WRITE_TOKEN
+    delete process.env.BLOB_STORE_ID
+    process.env.VERCEL = "1"
+    await expect(saveAudit(makeAudit())).rejects.toThrow(/private Blob storage is not configured/)
+    const body = new FormData()
+    body.set("store_url", "https://example.com")
+    body.set("contact_email", "")
+    body.set("include_product_feed", "true")
+    body.set("include_agent_pack", "false")
+    body.set("output_language", "en")
+    const response = await POST(new Request("http://local/api/audits", { method: "POST", body }))
+    expect(response.status).toBe(503)
+    const json = (await response.json()) as { error: { message: string } }
+    expect(json.error.message).toMatch(/Blob/)
+    expect(json.error.message).not.toMatch(/mkdir/)
   })
 
   it("turns off fixture buttons, loopback, and simulated pay for the public paid configuration", async () => {

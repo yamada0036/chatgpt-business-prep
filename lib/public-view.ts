@@ -5,6 +5,7 @@ import { excerpt } from "@/lib/audit/profile"
 import { FEED_FIELDS, REQUIRED_FEED_FIELDS } from "@/lib/official/spec"
 import { incompleteRowCount } from "@/lib/feed/finalize"
 import { packScope } from "@/lib/pack/scope"
+import { paidCheckoutState, type PaidState } from "@/lib/paypal/ready"
 
 export type PublicAudit = {
   id: string
@@ -46,6 +47,7 @@ export type PublicAudit = {
   supplements: SupplementTarget[]
   paid: boolean
   skuCapNote: string
+  paidCheckout: PaidState
 }
 
 export function toPublicAudit(audit: AuditRecord): PublicAudit {
@@ -100,6 +102,7 @@ export function toPublicAudit(audit: AuditRecord): PublicAudit {
     supplements: paid ? supplementTargets(audit) : [],
     paid,
     skuCapNote: scope.note,
+    paidCheckout: paidCheckoutState(),
   }
 }
 

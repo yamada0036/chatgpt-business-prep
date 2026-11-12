@@ -19,6 +19,7 @@ type CheckoutConfig = {
   showSimulatedPay: boolean
   ready: boolean
   blocker: string
+  paidState: "ready" | "simulated" | "coming_soon" | "unavailable"
 }
 
 const ORDER_LABEL = {
@@ -76,7 +77,7 @@ export function CheckoutPanel({
   }
   const quote = audit.order.breakdown
   const shown = money(quote.totalCents, quote.currency)
-  const paypal = config.checkoutMode === "paypal"
+  const comingSoon = config.paidState === "coming_soon"
 
   async function pay(action: "pay" | "fail") {
     setPending(true)
@@ -107,9 +108,11 @@ export function CheckoutPanel({
         <CardContent className="space-y-2 text-sm leading-6">
           <p>Order status: {ORDER_LABEL[audit.order.status]}</p>
           <p>
-            {quote.priceEnvSet
-              ? "PayPal charges this same amount. The figure on this page is the amount sent to PayPal."
-              : "A live price is not configured, so checkout cannot charge this order."}
+            {comingSoon
+              ? "Paid checkout is coming soon. The free audit does not require payment."
+              : quote.priceEnvSet
+                ? "PayPal charges this same amount. The figure on this page is the amount sent to PayPal."
+                : "A live price is not configured, so checkout cannot charge this order."}
             {" "}This page does not collect card numbers, bank details, or a PayPal password.
           </p>
           <p>
@@ -119,7 +122,7 @@ export function CheckoutPanel({
           {audit.order.failureReason ? <p>{audit.order.failureReason}</p> : null}
           {audit.order.status === "delivered" || audit.order.status === "paid" ? (
             <Button asChild><a href={`/audit/${id}/delivery`}>Go to delivery</a></Button>
-          ) : (
+          ) : comingSoon ? null : (
             <>
               <div className="space-y-2">
                 <Label htmlFor="contact_email">Contact email (required before payment)</Label>
@@ -127,7 +130,7 @@ export function CheckoutPanel({
                 {audit.contactEmail ? <p className="text-muted-foreground">Saved {audit.contactEmail}. Leave this blank to keep it.</p> : null}
               </div>
               {error ? <p className="text-destructive">{error}</p> : null}
-              {paypal && config.ready && config.paypalClientId ? (
+              {config.paidState === "ready" && config.paypalClientId ? (
                 <div className="space-y-2">
                   <p>You pay on PayPal. Approving the payment does not unlock the pack until PayPal confirms the capture.</p>
                   {config.paypalEnv === "sandbox" ? <p className="text-muted-foreground">Sandbox mode. No live charge is sent to a live PayPal account.</p> : null}
@@ -142,15 +145,12 @@ export function CheckoutPanel({
                   />
                 </div>
               ) : null}
-              {paypal && !config.ready ? <p className="text-destructive">{config.blocker}</p> : null}
-              {!paypal && config.showSimulatedPay ? (
+              {config.paidState === "unavailable" ? <p>{config.blocker}</p> : null}
+              {config.paidState === "simulated" ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button className="h-11" disabled={pending} onClick={() => pay("pay")}>Confirm simulated payment (test)</Button>
                   <Button variant="outline" disabled={pending} onClick={() => pay("fail")}>Simulate a failed payment (test)</Button>
                 </div>
-              ) : null}
-              {!paypal && !config.showSimulatedPay ? (
-                <p className="text-destructive">PayPal Checkout is not configured, so payment cannot start.</p>
               ) : null}
             </>
           )}

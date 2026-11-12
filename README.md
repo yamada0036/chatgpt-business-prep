@@ -37,14 +37,14 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 | `PREP_FETCH_TIMEOUT_MS` | `12000` | Per-request timeout. |
 | `PREP_RETENTION_DAYS` | `30` | Then the audit, crawl extract, and packs are deleted. |
 | `PREP_ALLOW_LOOPBACK` | on locally | Lets local fixture stores be crawled. Forced off when `PAYPAL_ENV=live` or when a production deploy has a price. |
-| `PREP_DATA_DIR` | `./data` | Local filesystem store only. Gitignored. Not used for paid checkout once Blob and `DATABASE_URL` are set. |
+| `PREP_DATA_DIR` | `./data` | Local filesystem store only. Gitignored. Not used on Vercel. |
 | `PAYPAL_CLIENT_ID` | empty | PayPal REST app client id. Public in the browser. The secret never is. |
 | `PAYPAL_CLIENT_SECRET` | empty | PayPal REST app secret. Server only. |
 | `PAYPAL_WEBHOOK_ID` | empty | Id of the webhook registered in the PayPal app. Required before checkout can start. |
 | `PAYPAL_ENV` | `sandbox` | `sandbox` or `live`. Only `live` talks to the live API. |
 | `BLOB_READ_WRITE_TOKEN` | empty | Private Vercel Blob read/write token. |
 | `BLOB_STORE_ID` | empty | Private Blob store id when the deployment uses Vercel OIDC instead of a token. |
-| `DATABASE_URL` | empty | Postgres connection string for order and audit metadata. |
+| `DATABASE_URL` | empty | Optional. Audits and pack files are stored in private Blob. Postgres is not required. |
 | `PREP_PUBLIC_URL` | empty | Optional origin for PayPal return and cancel URLs. |
 
 Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order. PayPal is created with that same `amountCents` and currency. The webhook accepts the capture only when the amount and currency still match.
@@ -63,7 +63,7 @@ A catalog with more than 50 product rows still costs $49. The paid CSV includes 
 
 1. In the PayPal developer dashboard, create a sandbox REST app and copy the client id and secret into `.env.local`.
 2. Set `PAYPAL_ENV=sandbox`, `PREP_BASE_PRICE_CENTS=4900`, and `PREP_CURRENCY=USD`.
-3. Set `BLOB_READ_WRITE_TOKEN` (or `BLOB_STORE_ID` on Vercel) and `DATABASE_URL`. Checkout will not start without them.
+3. Set `BLOB_READ_WRITE_TOKEN` (or `BLOB_STORE_ID` on Vercel). That private Blob store holds the audit record and the pack files. `DATABASE_URL` is optional and is not required.
 4. Run the app on a URL PayPal can reach. For local sandbox, expose it with a tunnel and set `PREP_PUBLIC_URL` to that origin.
 5. In the sandbox app, add a webhook. The URL to register is `https://<your-domain>/api/paypal/webhook`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.REFUNDED`, and `PAYMENT.CAPTURE.REVERSED`.
 6. Copy the webhook id into `PAYPAL_WEBHOOK_ID`.
@@ -72,7 +72,7 @@ A catalog with more than 50 product rows still costs $49. The paid CSV includes 
 
 ### Live
 
-Create a live REST app. Set `PAYPAL_ENV=live`, replace the client id, secret, and webhook id with the live values, and register the same path on the live app: `https://<your-production-domain>/api/paypal/webhook`. Confirm Blob and `DATABASE_URL` are set on that deployment. `PREP_ALLOW_LOOPBACK` is forced off in this mode. Redeploy only after those values are in the host's environment, not in git.
+Create a live REST app. Set `PAYPAL_ENV=live`, replace the client id, secret, and webhook id with the live values, and register the same path on the live app: `https://<your-production-domain>/api/paypal/webhook`. Confirm the private Blob token is set on that deployment. `PREP_ALLOW_LOOPBACK` is forced off in this mode. Redeploy only after those values are in the host's environment, not in git. If the PayPal variables are missing, the free audit still runs and paid checkout says it is coming soon.
 
 ## What the merchant gets
 

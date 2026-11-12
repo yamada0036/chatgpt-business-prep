@@ -10,7 +10,7 @@ import {
 } from "@/lib/store/repository"
 
 export function createMemoryMetadata(): MetadataStore {
-  const rows = new Map<string, { record: AuditRecord; generation: number }>()
+  const rows = new Map<string, { record: AuditRecord; generation: string }>()
   const captures = new Map<string, string>()
   return {
     async prepare() {},
@@ -23,13 +23,13 @@ export function createMemoryMetadata(): MetadataStore {
       const current = rows.get(record.id)
       rows.set(record.id, {
         record: structuredClone(record),
-        generation: current ? current.generation + 1 : 0,
+        generation: current ? String(Number(current.generation) + 1) : "0",
       })
     },
     async compareAndSwap(id, record, expectedGeneration) {
       const current = rows.get(id)
       if (!current || current.generation !== expectedGeneration) return false
-      rows.set(id, { record: structuredClone(record), generation: expectedGeneration + 1 })
+      rows.set(id, { record: structuredClone(record), generation: String(Number(expectedGeneration) + 1) })
       return true
     },
     async expiredIds(nowIso) {

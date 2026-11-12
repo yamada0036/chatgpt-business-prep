@@ -223,7 +223,11 @@ function Results({ audit }: { audit: PublicAudit }) {
             This run has {audit.order.breakdown.rowCount} rows and {price} due.
           </p>
           {audit.skuCapNote ? <p>{audit.skuCapNote}</p> : null}
-          <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>Continue to payment</Link></Button>
+          {audit.paidCheckout === "coming_soon" ? (
+            <p>Paid checkout is coming soon. The free audit on this page is ready to use.</p>
+          ) : (
+            <Button className="h-11" asChild><Link href={`/audit/${audit.id}/checkout`}>Continue to payment</Link></Button>
+          )}
         </CardContent>
       </Card>
     </>

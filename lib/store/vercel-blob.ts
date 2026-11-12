@@ -1,3 +1,4 @@
+import type { JsonBlob } from "@/lib/store/blob-meta"
 import type { ObjectStore } from "@/lib/store/repository"
 
 export function blobEnvReady(): boolean {
@@ -37,13 +38,58 @@ export function createVercelObjectStore(): ObjectStore {
       }
     },
     async deletePrefix(prefix) {
-      const { list, del } = await blobApi()
+      await deleteBlobPrefix(prefix)
+    },
+  }
+}
+
+async function deleteBlobPrefix(prefix: string): Promise<void> {
+  const { list, del } = await blobApi()
+  let cursor: string | undefined
+  do {
+    const page = await list({ prefix, cursor, limit: 1000 })
+    if (page.blobs.length > 0) await del(page.blobs.map((blob) => blob.url))
+    cursor = page.hasMore ? page.cursor : undefined
+  } while (cursor)
+}
+
+/** Audit JSON and capture pointers in the same private Blob store as the pack files. */
+export function createVercelJsonBlob(): JsonBlob {
+  return {
+    async read(pathname) {
+      const { get } = await blobApi()
+      try {
+        const result = await get(pathname, { access: "private", useCache: false })
+        if (!result || result.statusCode !== 200 || !result.stream) return null
+        const text = await new Response(result.stream).text()
+        return { text, etag: result.blob.etag }
+      } catch (error) {
+        if (missingBlob(error)) return null
+        throw error
+      }
+    },
+    async write(pathname, text, contentType, options) {
+      const { put } = await blobApi()
+      await put(pathname, text, {
+        access: "private",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType,
+        cacheControlMaxAge: 60,
+        ifMatch: options?.ifMatch,
+      })
+    },
+    removePrefix: deleteBlobPrefix,
+    async list(prefix) {
+      const { list } = await blobApi()
+      const pathnames: string[] = []
       let cursor: string | undefined
       do {
         const page = await list({ prefix, cursor, limit: 1000 })
-        if (page.blobs.length > 0) await del(page.blobs.map((blob) => blob.url))
+        pathnames.push(...page.blobs.map((blob) => blob.pathname))
         cursor = page.hasMore ? page.cursor : undefined
       } while (cursor)
+      return pathnames
     },
   }
 }

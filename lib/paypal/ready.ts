@@ -12,6 +12,15 @@ export function checkoutBlocker(): string | null {
   return null
 }
 
+export type PaidState = "ready" | "simulated" | "coming_soon" | "unavailable"
+
+export function paidCheckoutState(): PaidState {
+  if (!paypalClientId() || !paypalClientSecret()) {
+    return getConfig().allowSimulatedPay ? "simulated" : "coming_soon"
+  }
+  return checkoutBlocker() ? "unavailable" : "ready"
+}
+
 export type PublicCheckoutConfig = {
   checkoutMode: "simulated" | "paypal"
   paypalClientId: string
@@ -21,19 +30,21 @@ export type PublicCheckoutConfig = {
   showFixtures: boolean
   ready: boolean
   blocker: string
+  paidState: PaidState
 }
 
 export function publicCheckoutConfig(): PublicCheckoutConfig {
   const config = getConfig()
-  const blocker = config.checkoutMode === "paypal" ? checkoutBlocker() ?? "" : ""
+  const paidState = paidCheckoutState()
   return {
     checkoutMode: config.checkoutMode,
-    paypalClientId: config.checkoutMode === "paypal" ? paypalClientId() : "",
+    paypalClientId: paidState === "ready" ? paypalClientId() : "",
     currency: config.currency,
     paypalEnv: config.paypalEnv,
-    showSimulatedPay: config.allowSimulatedPay,
+    showSimulatedPay: paidState === "simulated",
     showFixtures: config.showFixtures,
-    ready: config.checkoutMode === "paypal" && blocker === "",
-    blocker,
+    ready: paidState === "ready",
+    blocker: paidState === "unavailable" ? checkoutBlocker() ?? "" : "",
+    paidState,
   }
 }

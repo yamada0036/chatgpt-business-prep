@@ -1,5 +1,6 @@
 import { withQuote } from "@/lib/audit/compose"
 import { isAuditRunning } from "@/lib/audit/run"
+import { getConfig } from "@/lib/config"
 import { toPublicAudit } from "@/lib/public-view"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
 import { readAudit, updateAudit } from "@/lib/store/audits"
@@ -10,7 +11,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params
   let audit = await readAudit(id)
   if (!audit) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
-  if (audit.status === "running" && !isAuditRunning(audit.id) && Date.now() - Date.parse(audit.createdAt) > 20_000) {
+  const interruptedAfter = getConfig().auditBudgetMs + 15_000
+  if (audit.status === "running" && !isAuditRunning(audit.id) && Date.now() - Date.parse(audit.createdAt) > interruptedAfter) {
     audit = await updateAudit(audit.id, (current) => ({
       ...current,
       status: "error",

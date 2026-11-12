@@ -1,10 +1,10 @@
 import type { AuditRecord } from "@/lib/audit/types"
+import { createBlobMetadata } from "@/lib/store/blob-meta"
 import { createDurableRepository } from "@/lib/store/durable"
 import { createFilesystemRepository } from "@/lib/store/filesystem"
-import { createLazyNeonMetadata, databaseUrl } from "@/lib/store/postgres"
 import { assertAuditId } from "@/lib/store/audits-id"
 import type { AuditRepository } from "@/lib/store/repository"
-import { blobEnvReady, createVercelObjectStore } from "@/lib/store/vercel-blob"
+import { blobEnvReady, createVercelJsonBlob, createVercelObjectStore } from "@/lib/store/vercel-blob"
 
 const filesystem = createFilesystemRepository()
 let override: AuditRepository | null = null
@@ -12,19 +12,45 @@ let production: AuditRepository | null = null
 
 export { assertAuditId }
 
+export class StorageError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "StorageError"
+  }
+}
+
 export function durableEnvReady(): boolean {
-  return blobEnvReady() && Boolean(databaseUrl())
+  return blobEnvReady()
+}
+
+function unconfiguredRepository(): AuditRepository {
+  const fail = async () => {
+    throw new StorageError(
+      "The audit could not be saved because private Blob storage is not configured. Nothing was stored on the local disk.",
+    )
+  }
+  return {
+    kind: "filesystem",
+    readAudit: async () => null,
+    writeAudit: fail,
+    updateAudit: fail,
+    writeVersionFiles: fail,
+    readVersionFile: async () => null,
+    rememberCapture: fail,
+    auditIdForCapture: async () => null,
+  }
 }
 
 export function activeRepository(): AuditRepository {
   if (override) return override
-  if (durableEnvReady()) {
+  if (blobEnvReady()) {
     production ??= createDurableRepository({
-      metadata: createLazyNeonMetadata(),
+      metadata: createBlobMetadata(createVercelJsonBlob()),
       objects: createVercelObjectStore(),
     })
     return production
   }
+  if (process.env.VERCEL) return unconfiguredRepository()
   return filesystem
 }
 
@@ -35,15 +61,10 @@ export function setAuditStoreForTests(store: AuditRepository | null): void {
 
 export function paidStorageBlocker(): string | null {
   if (activeRepository().kind === "durable") return null
-  const blob = blobEnvReady()
-  const database = Boolean(databaseUrl())
-  if (!blob && !database) {
-    return "Paid checkout cannot start because packs are still stored on the local filesystem (PREP_DATA_DIR). That disk is wiped on a Vercel deploy. Set BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID for a private Vercel Blob store, and DATABASE_URL for order metadata. No PayPal order was created."
+  if (process.env.VERCEL) {
+    return "Paid checkout cannot start because BLOB_READ_WRITE_TOKEN is not set for this deployment. No PayPal order was created."
   }
-  if (!blob) {
-    return "Paid checkout cannot start because BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID is missing. Pack files would not survive a deploy. No PayPal order was created."
-  }
-  return "Paid checkout cannot start because DATABASE_URL is missing. Order status would not survive a deploy. No PayPal order was created."
+  return "Paid checkout cannot start because packs are still stored on the local filesystem (PREP_DATA_DIR). That disk is wiped on a Vercel deploy. Set BLOB_READ_WRITE_TOKEN for a private Vercel Blob store. No PayPal order was created."
 }
 
 export async function writeAudit(audit: AuditRecord): Promise<void> {

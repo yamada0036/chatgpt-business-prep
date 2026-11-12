@@ -1,3 +1,4 @@
+import { after } from "next/server"
 import type { AuditRecord } from "@/lib/audit/types"
 import { composeFromSources, withQuote } from "@/lib/audit/compose"
 import { crawlStore, type CrawlOptions, type CrawlResult } from "@/lib/crawl/fetch-store"
@@ -27,6 +28,11 @@ export function enqueueAudit(id: string, crawlOptions?: CrawlOptions): void {
       jobs.delete(id)
     })
   jobs.set(id, job)
+  try {
+    after(() => job)
+  } catch {
+    /* outside a request the job is already running */
+  }
 }
 
 export async function runAudit(id: string, crawlOptions?: CrawlOptions): Promise<void> {
