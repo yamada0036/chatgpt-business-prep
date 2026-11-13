@@ -5,9 +5,16 @@ import { IntendedOffer } from "@/components/intended-offer"
 import { WAFFO_VERIFY_CONTENT, WAFFO_VERIFY_NAME } from "@/lib/legal/public"
 import { getPublicOffer } from "@/lib/offer"
 import { DISCLAIMER_SHORT } from "@/lib/official/spec"
+import { pageMetadata } from "@/lib/seo"
 import { showFixtureButtons } from "@/lib/site-mode"
 
 export const metadata: Metadata = {
+  ...pageMetadata({
+    path: "/",
+    title: "Prep · ChatGPT business setup",
+    description:
+      "Check what a public store and product feed are missing. Start with a free audit. This tool does not claim the business and does not promise a recommendation.",
+  }),
   other: {
     [WAFFO_VERIFY_NAME]: WAFFO_VERIFY_CONTENT,
   },

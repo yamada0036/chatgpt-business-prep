@@ -1,6 +1,14 @@
+import type { Metadata } from "next"
 import { SCORE_EXPLANATION, OFFICIAL_LINKS, DISCLAIMER_BLOCKS } from "@/lib/official/spec"
 import { RETENTION_FACT } from "@/lib/legal/public"
+import { pageMetadata } from "@/lib/seo"
 import { showFixtureButtons } from "@/lib/site-mode"
+
+export const metadata: Metadata = pageMetadata({
+  path: "/help",
+  title: "Score and limits · Prep",
+  description: "How the prep score is calculated, what the crawler reads, and what the prep pack contains.",
+})
 
 export default function HelpPage() {
   return (

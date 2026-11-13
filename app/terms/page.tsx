@@ -2,11 +2,13 @@ import type { Metadata } from "next"
 import { LegalDocument } from "@/components/legal-document"
 import { termsSections } from "@/lib/legal/document"
 import { getPublicOffer } from "@/lib/offer"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/terms",
   title: "Terms of use · Prep",
   description: "Terms for the free store-prep audit. Paid checkout is not available.",
-}
+})
 
 export default function TermsPage() {
   const offer = getPublicOffer()
