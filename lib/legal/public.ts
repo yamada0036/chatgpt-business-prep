@@ -1,6 +1,6 @@
 /** Public Waffo domain-control value. It is not a login or API secret. */
 export const WAFFO_VERIFY_NAME = "waffo-verify"
-export const WAFFO_VERIFY_CONTENT = "56efef08aaf5a8144992e96465438566"
+export const WAFFO_VERIFY_CONTENT = "9c21a76acbde2bc00ada836d8153edfd"
 
 export const SUPPORT_EMAIL = "praxora-ai@mail.grokbot.com"
 export const LEGAL_UPDATED = "13 November 2026"

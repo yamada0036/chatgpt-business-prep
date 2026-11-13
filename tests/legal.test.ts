@@ -41,7 +41,7 @@ describe("public legal copy", () => {
     const home = await readFile(path.join(process.cwd(), "app/page.tsx"), "utf8")
     const shell = await readFile(path.join(process.cwd(), "components/site-shell.tsx"), "utf8")
     expect(WAFFO_VERIFY_NAME).toBe("waffo-verify")
-    expect(WAFFO_VERIFY_CONTENT).toBe("56efef08aaf5a8144992e96465438566")
+    expect(WAFFO_VERIFY_CONTENT).toBe("9c21a76acbde2bc00ada836d8153edfd")
     expect(home).toContain("WAFFO_VERIFY_NAME")
     expect(home).toContain("WAFFO_VERIFY_CONTENT")
     expect(shell).toContain('href="/terms"')
