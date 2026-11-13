@@ -24,6 +24,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <Link href="/terms" className="underline">Terms</Link>
             <Link href="/privacy" className="underline">Privacy</Link>
             <Link href="/pricing" className="underline">Pricing</Link>
+            <Link href="/guides/claim-chatgpt-business-profile-shopify" className="underline">
+              Shopify claim guide
+            </Link>
           </nav>
           <Disclaimer />
         </div>

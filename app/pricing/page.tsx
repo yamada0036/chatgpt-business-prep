@@ -2,13 +2,15 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { PricingCards } from "@/components/pricing-cards"
 import { getPublicOffer } from "@/lib/offer"
+import { pageMetadata } from "@/lib/seo"
 
 export async function generateMetadata(): Promise<Metadata> {
   const offer = getPublicOffer()
-  return {
+  return pageMetadata({
+    path: "/pricing",
     title: "Pricing · Prep",
     description: `Free audit, or Pro with a ${offer.trialDays}-day free trial (${offer.trialPriceLabel}, no card), then ${offer.monthlyPriceLabel} per month.`,
-  }
+  })
 }
 
 export default function PricingPage() {
