@@ -1,5 +1,5 @@
 import type { AuditRecord } from "@/lib/audit/types"
-import type { MetadataStore } from "@/lib/store/repository"
+import { assertTrialSlotId, type MetadataStore } from "@/lib/store/repository"
 
 type SqlRunner = {
   query<T extends Record<string, unknown>>(text: string, values?: unknown[]): Promise<T[]>
@@ -27,6 +27,10 @@ export function createPostgresMetadata(runner: SqlRunner): MetadataStore {
         )`)
         await runner.query(`CREATE TABLE IF NOT EXISTS prep_paypal_captures (
           capture_id TEXT PRIMARY KEY,
+          audit_id TEXT NOT NULL
+        )`)
+        await runner.query(`CREATE TABLE IF NOT EXISTS prep_trial_slots (
+          slot_id TEXT PRIMARY KEY,
           audit_id TEXT NOT NULL
         )`)
       })().catch((error: unknown) => {
@@ -111,6 +115,28 @@ export function createPostgresMetadata(runner: SqlRunner): MetadataStore {
       )
       return rows[0]?.audit_id ?? null
     },
+    async claimSlot(slotId, auditId) {
+      const id = assertTrialSlotId(slotId)
+      await prepare()
+      const inserted = await runner.query<{ audit_id: string }>(
+        `INSERT INTO prep_trial_slots (slot_id, audit_id)
+         VALUES ($1, $2)
+         ON CONFLICT (slot_id) DO NOTHING
+         RETURNING audit_id`,
+        [id, auditId],
+      )
+      if (inserted[0]?.audit_id === auditId) return "owned"
+      const current = await runner.query<{ audit_id: string }>(
+        "SELECT audit_id FROM prep_trial_slots WHERE slot_id = $1",
+        [id],
+      )
+      return current[0]?.audit_id === auditId ? "owned" : "conflict"
+    },
+    async releaseSlot(slotId, auditId) {
+      const id = assertTrialSlotId(slotId)
+      await prepare()
+      await runner.query("DELETE FROM prep_trial_slots WHERE slot_id = $1 AND audit_id = $2", [id, auditId])
+    },
   }
 }
 
@@ -155,5 +181,7 @@ export function createLazyNeonMetadata(): MetadataStore {
     remove: async (ids) => (await load()).remove(ids),
     rememberCapture: async (captureId, auditId) => (await load()).rememberCapture(captureId, auditId),
     auditIdForCapture: async (captureId) => (await load()).auditIdForCapture(captureId),
+    claimSlot: async (slotId, auditId) => (await load()).claimSlot(slotId, auditId),
+    releaseSlot: async (slotId, auditId) => (await load()).releaseSlot(slotId, auditId),
   }
 }

@@ -1,13 +1,17 @@
-import type { AuditRecord } from "@/lib/audit/types"
+import type { AuditRecord, OrderStatus } from "@/lib/audit/types"
 import { orderUnlocksPack } from "@/lib/audit/types"
+import { OWNER_REQUIRED, TrialError } from "@/lib/access"
 import { incompleteRowCount } from "@/lib/feed/finalize"
 import { packScope } from "@/lib/pack/scope"
 import { renderPack, packFileList } from "@/lib/pack/render"
 import { zipFiles } from "@/lib/pack/zip"
 import { quotePrice } from "@/lib/pricing"
 import { getConfig } from "@/lib/config"
-import { updateAudit, writeVersionFiles } from "@/lib/store/audits"
+import { getPublicOffer } from "@/lib/offer"
+import { ownerTokenMatches } from "@/lib/owner"
+import { claimTrialSlot, releaseTrialSlot, updateAudit, writeVersionFiles } from "@/lib/store/audits"
 import { looksLikeEmail } from "@/lib/text"
+import { emailTrialSlot, siteTrialSlot } from "@/lib/trial-slots"
 import { zipFileName } from "@/lib/time"
 import { isTrialActive, startTrialState } from "@/lib/subscription"
 
@@ -77,31 +81,46 @@ export async function settleOrder(
 export async function startFreeTrial(
   id: string,
   email: string,
+  ownerToken: string,
   now = new Date(),
 ): Promise<AuditRecord> {
-  const nextEmail = email?.trim()
-  if (!nextEmail || !looksLikeEmail(nextEmail)) {
-    throw new Error("A contact email is required to start the free trial.")
+  const offer = getPublicOffer()
+  if (!offer.trialCanStart) {
+    throw new TrialError("The free trial cannot start while its configured price is not zero. Paid checkout is not available, so nothing was charged.")
   }
   return updateAudit(id, async (audit) => {
+    if (!ownerTokenMatches(audit.ownerSecretHash, ownerToken)) throw new TrialError(OWNER_REQUIRED, 403)
     if (audit.status !== "complete" && audit.status !== "partial") {
-      throw new Error("The audit is not finished, so the free trial cannot start yet.")
+      throw new TrialError("The audit is not finished, so the free trial cannot start yet.")
+    }
+    if (audit.order.status === "refunded") {
+      throw new TrialError("This payment was refunded. The free trial cannot start.", 403)
     }
     if (orderUnlocksPack(audit.order.status)) return audit
     if (audit.trial && isTrialActive(audit.trial, now)) return audit
     if (audit.trial) {
-      throw new Error("This audit already used its one free trial. The trial cannot be restarted.")
+      throw new TrialError("This audit already used its one free trial. The trial cannot be restarted.", 409)
+    }
+    const nextEmail = email?.trim() || audit.contactEmail.trim()
+    if (!nextEmail || !looksLikeEmail(nextEmail)) {
+      throw new TrialError("A contact email is required to start the free trial.")
+    }
+    const siteSlot = siteTrialSlot(audit.storeUrl)
+    const emailSlot = emailTrialSlot(nextEmail)
+    if ((await claimTrialSlot(siteSlot, audit.id)) === "conflict") {
+      throw new TrialError("This store already used its one free trial.", 409)
+    }
+    if ((await claimTrialSlot(emailSlot, audit.id)) === "conflict") {
+      await releaseTrialSlot(siteSlot, audit.id)
+      throw new TrialError("This email already used its one free trial.", 409)
     }
     const withTrial: AuditRecord = {
       ...audit,
       contactEmail: nextEmail,
-      trial: startTrialState(nextEmail, now),
+      trial: startTrialState(nextEmail, offer, now),
     }
-    // publishVersion marks the order "delivered" for the paid flow.
-    // A trial is not a payment, so keep the order pending: the trial
-    // field — not the order status — is what unlocks the pack.
-    const published = await publishVersion(withTrial, now)
-    return { ...published, order: { ...published.order, status: "pending" } }
+    // A trial is not a payment. Keep the order pending so expiry can lock the pack.
+    return publishVersion(withTrial, now, { orderStatus: "pending" })
   })
 }
 
@@ -131,8 +150,13 @@ export function markCaptureRefunded(audit: AuditRecord, captureId: string, when 
   const canLock =
     orderUnlocksPack(audit.order.status) || audit.order.status === "pending" || audit.order.status === "failed"
   const lockThisOrder = isCurrent && canLock
+  const trial =
+    lockThisOrder && audit.trial && audit.trial.status !== "cancelled"
+      ? { ...audit.trial, status: "cancelled" as const, cancelledAt: when.toISOString() }
+      : audit.trial
   return {
     ...audit,
+    trial,
     order: {
       ...audit.order,
       blockedCaptureIds: [...blocked],
@@ -160,7 +184,11 @@ export function markCaptureDenied(audit: AuditRecord): AuditRecord {
   }
 }
 
-export async function publishVersion(audit: AuditRecord, when = new Date()): Promise<AuditRecord> {
+export async function publishVersion(
+  audit: AuditRecord,
+  when = new Date(),
+  options?: { orderStatus?: OrderStatus },
+): Promise<AuditRecord> {
   const version = (audit.versions.at(-1)?.version ?? 0) + 1
   const files = renderPack(audit, version, when)
   const zip = await zipFiles(files)
@@ -169,7 +197,7 @@ export async function publishVersion(audit: AuditRecord, when = new Date()): Pro
   const scoped = packScope(audit)
   return {
     ...audit,
-    order: { ...audit.order, status: "delivered" },
+    order: { ...audit.order, status: options?.orderStatus ?? "delivered" },
     versions: [
       ...audit.versions,
       {

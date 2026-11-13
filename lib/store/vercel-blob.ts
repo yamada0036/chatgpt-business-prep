@@ -80,7 +80,7 @@ export function createVercelJsonBlob(): JsonBlob {
       await put(pathname, text, {
         access: "private",
         addRandomSuffix: false,
-        allowOverwrite: true,
+        allowOverwrite: options?.exclusiveCreate ? false : true,
         contentType,
         cacheControlMaxAge: 60,
         ifMatch: options?.ifMatch,

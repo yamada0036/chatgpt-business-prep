@@ -38,6 +38,8 @@ function unconfiguredRepository(): AuditRepository {
     readVersionFile: async () => null,
     rememberCapture: fail,
     auditIdForCapture: async () => null,
+    claimTrialSlot: fail,
+    releaseTrialSlot: fail,
   }
 }
 
@@ -101,6 +103,14 @@ export async function rememberCapture(captureId: string, auditId: string): Promi
 
 export async function auditIdForCapture(captureId: string): Promise<string | null> {
   return activeRepository().auditIdForCapture(captureId)
+}
+
+export async function claimTrialSlot(slotId: string, auditId: string): Promise<"owned" | "conflict"> {
+  return activeRepository().claimTrialSlot(slotId, auditId)
+}
+
+export async function releaseTrialSlot(slotId: string, auditId: string): Promise<void> {
+  return activeRepository().releaseTrialSlot(slotId, auditId)
 }
 
 export function logEvent(event: string, fields: Record<string, string | number | boolean | undefined>): void {

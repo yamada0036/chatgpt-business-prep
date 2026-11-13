@@ -1,6 +1,6 @@
 import { settleOrder } from "@/lib/audit/checkout"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
-import { toPublicAudit } from "@/lib/public-view"
+import { presentAudit } from "@/lib/present"
 import { readAudit } from "@/lib/store/audits"
 
 export const dynamic = "force-dynamic"
@@ -18,7 +18,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   try {
     const audit = await settleOrder(id, body.action, body.contact_email)
-    return Response.json(toPublicAudit(audit))
+    return Response.json(presentAudit(audit))
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payment did not finish."
     const status = message.startsWith("Simulated payment is disabled") || message.startsWith("Paid checkout is not available") ? 403 : 400

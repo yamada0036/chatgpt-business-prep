@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { getPlans } from "@/lib/subscription"
+import type { Plan } from "@/lib/plan"
 
 /**
  * ChatGPT-style pricing: Free vs Pro, side by side, same product in two
@@ -20,10 +20,22 @@ import { getPlans } from "@/lib/subscription"
  * buttons send the visitor to the homepage to run a free audit first.
  * The `auditId` prop is optional: when given, the Free card starts the
  * trial here and the Pro card links to that audit's delivery page.
+ * Prices are passed in from the server. This file does not read env or PayPal secrets.
  */
-export function PricingCards({ auditId }: { auditId?: string }) {
+export function PricingCards({
+  auditId,
+  plans,
+  intro,
+  footnote,
+  trialCanStart,
+}: {
+  auditId?: string
+  plans: Plan[]
+  intro: string
+  footnote: string
+  trialCanStart: boolean
+}) {
   const router = useRouter()
-  const plans = getPlans()
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [pending, setPending] = useState(false)
@@ -34,6 +46,7 @@ export function PricingCards({ auditId }: { auditId?: string }) {
     setMessage("")
     const response = await fetch(`/api/audits/${auditId}/trial`, {
       method: "POST",
+      credentials: "same-origin",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ contact_email: email }),
     })
@@ -50,9 +63,7 @@ export function PricingCards({ auditId }: { auditId?: string }) {
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">Upgrade your plan</h1>
-        <p className="text-sm text-muted-foreground">
-          Try the full prep pack free for 7 days — no card, no charge. After that, Pro is USD 49.90 / month, only if you choose to continue.
-        </p>
+        <p className="text-sm text-muted-foreground">{intro}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {plans.map((plan) => (
@@ -64,9 +75,7 @@ export function PricingCards({ auditId }: { auditId?: string }) {
               </div>
               <p className="text-2xl font-semibold tracking-tight">{plan.headline}</p>
               <p className="text-sm text-muted-foreground">
-                {plan.id === "free"
-                  ? "The full prep pack, free for 7 days."
-                  : "The full prep pack, ready to submit yourself."}
+                {plan.id === "free" ? plan.features[2] : "The full prep pack, ready to submit yourself. Monthly billing is not for sale yet."}
               </p>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col space-y-4">
@@ -110,11 +119,13 @@ export function PricingCards({ auditId }: { auditId?: string }) {
                       placeholder="you@store.example"
                     />
                     {message ? <p className="text-sm text-destructive">{message}</p> : null}
-                    <Button className="h-11 w-full" variant="outline" disabled={pending} onClick={startTrial}>
+                    <Button className="h-11 w-full" variant="outline" disabled={pending || !trialCanStart} onClick={startTrial}>
                       {plan.cta}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      No card required. Nothing is charged during the 7 days. If you do nothing, the trial ends and nothing is charged.
+                      {trialCanStart
+                        ? "No card required. Nothing is charged during the trial. If you do nothing, the trial ends and nothing is charged. The download stays in the browser that created the audit."
+                        : "This trial price is not zero, and paid checkout is not available, so the trial cannot start."}
                     </p>
                   </>
                 ) : (
@@ -133,8 +144,7 @@ export function PricingCards({ auditId }: { auditId?: string }) {
         ))}
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        Free is 7 days only. After the trial, Pro is {plans[1]?.priceLabel}
-        {plans[1]?.period} — only if you explicitly start the paid subscription. Paid monthly billing is not for sale yet.
+        {footnote}
       </p>
     </div>
   )

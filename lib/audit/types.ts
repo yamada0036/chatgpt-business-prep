@@ -240,6 +240,11 @@ export type AuditRecord = {
   eligibility: Eligibility
   score: ScoreResult
   order: Order
+  /**
+   * SHA-256 of the owner token issued to the browser that created this audit.
+   * Absent on audits created before owner locking. Never copy this into a public response.
+   */
+  ownerSecretHash?: string
   trial?: TrialState
   versions: VersionMeta[]
   upload?: UploadData

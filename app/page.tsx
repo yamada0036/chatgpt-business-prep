@@ -3,6 +3,7 @@ import { AuditForm } from "@/components/audit-form"
 import { Disclaimer } from "@/components/disclaimer"
 import { IntendedOffer } from "@/components/intended-offer"
 import { WAFFO_VERIFY_CONTENT, WAFFO_VERIFY_NAME } from "@/lib/legal/public"
+import { getPublicOffer } from "@/lib/offer"
 import { DISCLAIMER_SHORT } from "@/lib/official/spec"
 import { showFixtureButtons } from "@/lib/site-mode"
 
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
+  const offer = getPublicOffer()
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="space-y-5">
@@ -31,7 +33,7 @@ export default function Home() {
           <li>You submit any prep materials yourself in Business Hub. This tool does not sign in, claim, or verify.</li>
           <li>Prices, brands, stock, and policies that were not fetched stay blank and are marked as needs input. Nothing is invented.</li>
         </ul>
-        <IntendedOffer />
+        <IntendedOffer paragraphs={[offer.notForSale, offer.intended, offer.termsGate]} />
         <p className="sr-only">{DISCLAIMER_SHORT}</p>
       </section>
       <AuditForm showFixtures={showFixtureButtons()} />

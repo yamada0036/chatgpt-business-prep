@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest"
-import { getPlans, isTrialActive, startTrialState, trialDaysLeft, trialStatus } from "@/lib/subscription"
+import { getPublicOffer } from "@/lib/offer"
+import { createOwnerToken } from "@/lib/owner"
+import { isTrialActive, startTrialState, trialDaysLeft, trialStatus } from "@/lib/subscription"
 import { startFreeTrial } from "@/lib/audit/checkout"
 import { buildProfile } from "@/lib/audit/profile"
 import { emptyScore, emptySummary, type AuditRecord } from "@/lib/audit/types"
@@ -10,6 +12,7 @@ import { createDurableRepository, createMemoryMetadata, createMemoryObjectStore 
 import { randomUUID } from "node:crypto"
 
 const originalEnv = { ...process.env }
+const owner = createOwnerToken()
 
 function makeAudit(): AuditRecord {
   const facts = emptyFacts("https://harbor.example")
@@ -47,6 +50,7 @@ function makeAudit(): AuditRecord {
       breakdown: { baseCents: 0, currency: "USD", includedSkus: 50, rowCount: 0, blockSize: 50, blockPriceCents: 0, overageBlocks: 0, overageCents: 0, totalCents: 0, priceEnvSet: false, mode: "simulated" },
       chargedCents: null,
     },
+    ownerSecretHash: owner.hash,
     versions: [],
   }
 }
@@ -73,7 +77,7 @@ afterEach(() => {
 
 describe("7-day free trial", () => {
   it("is USD 0.00 for 7 days (Free), then USD 49.90 / month (Pro), with no card", () => {
-    const plans = getPlans()
+    const plans = getPublicOffer().plans
     expect(plans).toHaveLength(2)
     // Free is the 7-day trial, not a forever-free tier.
     expect(plans[0]!.id).toBe("free")
@@ -93,7 +97,7 @@ describe("7-day free trial", () => {
   it("starts with an email only, charges 0, and unlocks the pack for 7 days", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    const started = await startFreeTrial(seeded.id, "merchant@harbor.example", new Date("2026-11-13T12:00:00Z"))
+    const started = await startFreeTrial(seeded.id, "merchant@harbor.example", owner.token, new Date("2026-11-13T12:00:00Z"))
     expect(started.trial?.chargedCents).toBe(0)
     expect(started.trial?.trialPriceCents).toBe(0)
     expect(started.trial?.monthlyPriceCents).toBe(4990)
@@ -103,6 +107,8 @@ describe("7-day free trial", () => {
     expect(started.versions).toHaveLength(1)
 
     const view = toPublicAudit(started, new Date("2026-11-13T12:00:00Z"))
+    expect(JSON.stringify(view)).not.toContain("merchant@harbor.example")
+    expect(view.trial).not.toHaveProperty("email")
     expect(view.paid).toBe(true)
     expect(view.trialStatus).toBe("active")
     expect(view.trialDaysLeft).toBe(7)
@@ -112,7 +118,7 @@ describe("7-day free trial", () => {
   it("locks the pack again after 7 days and charges nothing", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    const started = await startFreeTrial(seeded.id, "merchant@harbor.example", new Date("2026-11-13T12:00:00Z"))
+    const started = await startFreeTrial(seeded.id, "merchant@harbor.example", owner.token, new Date("2026-11-13T12:00:00Z"))
     const after = toPublicAudit(started, new Date("2026-11-21T12:00:01Z"))
     expect(after.trialStatus).toBe("expired")
     expect(after.trialDaysLeft).toBe(0)
@@ -124,13 +130,13 @@ describe("7-day free trial", () => {
   it("does not stack a second trial on the same audit, and an expired trial cannot restart", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    const first = await startFreeTrial(seeded.id, "merchant@harbor.example", new Date("2026-11-13T12:00:00Z"))
+    const first = await startFreeTrial(seeded.id, "merchant@harbor.example", owner.token, new Date("2026-11-13T12:00:00Z"))
     // Re-starting while active is idempotent: same trial, no second version.
-    const again = await startFreeTrial(seeded.id, "merchant@harbor.example", new Date("2026-11-14T12:00:00Z"))
+    const again = await startFreeTrial(seeded.id, "merchant@harbor.example", owner.token, new Date("2026-11-14T12:00:00Z"))
     expect(again.trial?.startedAt).toBe(first.trial?.startedAt)
     expect(again.versions).toHaveLength(1)
     // After expiry the same audit cannot start a new trial.
-    await expect(startFreeTrial(seeded.id, "merchant@harbor.example", new Date("2026-11-21T12:00:00Z"))).rejects.toThrow(
+    await expect(startFreeTrial(seeded.id, "merchant@harbor.example", owner.token, new Date("2026-11-21T12:00:00Z"))).rejects.toThrow(
       /already used its one free trial/,
     )
   })
@@ -138,14 +144,14 @@ describe("7-day free trial", () => {
   it("requires an email and a finished audit", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    await expect(startFreeTrial(seeded.id, "not-an-email")).rejects.toThrow(/contact email is required/)
+    await expect(startFreeTrial(seeded.id, "not-an-email", owner.token)).rejects.toThrow(/contact email is required/)
     const running = { ...makeAudit(), status: "running" as const }
     await writeAudit(running)
-    await expect(startFreeTrial(running.id, "merchant@harbor.example")).rejects.toThrow(/not finished/)
+    await expect(startFreeTrial(running.id, "merchant@harbor.example", owner.token)).rejects.toThrow(/not finished/)
   })
 
   it("pure trial helpers: active inside 7 days, expired after", () => {
-    const trial = startTrialState("merchant@harbor.example", new Date("2026-11-13T12:00:00Z"))
+    const trial = startTrialState("merchant@harbor.example", { trialDays: 7, trialPriceCents: 0, monthlyPriceCents: 4990, currency: "USD" }, new Date("2026-11-13T12:00:00Z"))
     expect(isTrialActive(trial, new Date("2026-11-19T12:00:00Z"))).toBe(true)
     expect(trialStatus(trial, new Date("2026-11-20T12:00:01Z"))).toBe("expired")
     expect(trialDaysLeft(trial, new Date("2026-11-19T12:00:00Z"))).toBe(1)

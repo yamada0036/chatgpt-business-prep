@@ -10,6 +10,17 @@ export function capturePointerPath(captureId: string): string {
   return `captures/${captureId}`
 }
 
+export function trialSlotPath(slotId: string): string {
+  return `trial-slots/${slotId}.json`
+}
+
+const SLOT_ID = /^[0-9a-f]{64}$/
+
+export function assertTrialSlotId(slotId: string): string {
+  if (!SLOT_ID.test(slotId)) throw new Error("bad trial slot")
+  return slotId
+}
+
 export type MetadataStore = {
   prepare(): Promise<void>
   get(id: string): Promise<StoredAudit | null>
@@ -19,6 +30,8 @@ export type MetadataStore = {
   remove(ids: string[]): Promise<void>
   rememberCapture(captureId: string, auditId: string): Promise<void>
   auditIdForCapture(captureId: string): Promise<string | null>
+  claimSlot(slotId: string, auditId: string): Promise<"owned" | "conflict">
+  releaseSlot(slotId: string, auditId: string): Promise<void>
 }
 
 export type ObjectStore = {
@@ -36,6 +49,9 @@ export type AuditRepository = {
   readVersionFile(id: string, version: number, name: string): Promise<Buffer | null>
   rememberCapture(captureId: string, auditId: string): Promise<void>
   auditIdForCapture(captureId: string): Promise<string | null>
+  /** One durable trial per hashed site or email. `owned` means this audit holds the slot. */
+  claimTrialSlot(slotId: string, auditId: string): Promise<"owned" | "conflict">
+  releaseTrialSlot(slotId: string, auditId: string): Promise<void>
 }
 
 const FILE_NAME = /^(?:pack\.zip|0[0-4]-[a-z0-9.-]+)$/

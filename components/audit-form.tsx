@@ -58,6 +58,7 @@ export function AuditForm({ showFixtures = false }: { showFixtures?: boolean }) 
       <CardContent>
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">The free summary can be opened from the link. The trial and the prep-pack download stay in this browser.</p>
             <Label htmlFor="store_url">Store URL</Label>
             <Input
               id="store_url"

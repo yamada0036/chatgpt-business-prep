@@ -167,7 +167,7 @@ function Results({ id, audit }: { id: string; audit: PublicAudit }) {
             </tbody>
           </table>
         </div>
-        <p className="text-sm text-muted-foreground">An excerpt is not the full profile draft. The full `02-profile-draft.md` is only in the paid prep pack.</p>
+        <p className="text-sm text-muted-foreground">An excerpt is not the full profile draft. The full 02-profile-draft.md is in the prep pack, which downloads during an active free trial in the browser that created this audit.</p>
       </section>
       {audit.includeProductFeed ? (
         <section className="space-y-3">
@@ -210,13 +210,13 @@ function Results({ id, audit }: { id: string; audit: PublicAudit }) {
           <CardTitle>One-store prep pack</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-6">
-          <p>The free audit does not include the full prep files. Those files are 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off.</p>
+          <p>The free audit does not include the full prep files. Those files are 00-readme.md, 01-claim-checklist.md, 02-profile-draft.md, 03-product-feed.csv, and 03-product-feed-issues.csv{audit.includeAgentPack ? ", plus 04-agent-pack.md" : ""}. The agent file is omitted when that box is off. The full files download during an active free trial in the browser that created this audit. Paid monthly billing is not for sale yet.</p>
           <p>This run counted {audit.order.breakdown.rowCount} product rows.</p>
           {audit.skuCapNote ? <p>{audit.skuCapNote}</p> : null}
-          <IntendedOffer />
+          <IntendedOffer paragraphs={[audit.offer.notForSale, audit.offer.intended, audit.offer.termsGate]} />
         </CardContent>
       </Card>
-      {audit.order.status === "pending" ? <TrialPanel id={id} audit={audit} /> : null}
+      {audit.order.status === "pending" || audit.trialStatus !== "none" ? <TrialPanel id={id} audit={audit} /> : null}
     </>
   )
 }

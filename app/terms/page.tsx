@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LegalDocument } from "@/components/legal-document"
-import { TERMS_SECTIONS } from "@/lib/legal/public"
+import { termsSections } from "@/lib/legal/document"
+import { getPublicOffer } from "@/lib/offer"
 
 export const metadata: Metadata = {
   title: "Terms of use · Prep",
@@ -8,5 +9,6 @@ export const metadata: Metadata = {
 }
 
 export default function TermsPage() {
-  return <LegalDocument title="Terms of use" sections={TERMS_SECTIONS} />
+  const offer = getPublicOffer()
+  return <LegalDocument title="Terms of use" sections={termsSections(offer)} />
 }

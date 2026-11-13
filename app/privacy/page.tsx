@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LegalDocument } from "@/components/legal-document"
-import { PRIVACY_SECTIONS } from "@/lib/legal/public"
+import { privacySections } from "@/lib/legal/document"
+import { getPublicOffer } from "@/lib/offer"
 
 export const metadata: Metadata = {
   title: "Privacy policy · Prep",
@@ -8,5 +9,6 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPage() {
-  return <LegalDocument title="Privacy policy" sections={PRIVACY_SECTIONS} />
+  const offer = getPublicOffer()
+  return <LegalDocument title="Privacy policy" sections={privacySections(offer)} />
 }
