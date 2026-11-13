@@ -20,6 +20,9 @@ function envInt(name: string, fallback: number): number {
 export type AppConfig = {
   basePriceCents: number
   priceEnvSet: boolean
+  trialDays: number
+  trialPriceCents: number
+  monthlyPriceCents: number
   currency: string
   includedSkus: number
   overageBlockSize: number
@@ -48,6 +51,12 @@ export function getConfig(): AppConfig {
   return {
     basePriceCents,
     priceEnvSet: Boolean(process.env.PREP_BASE_PRICE_CENTS?.trim()),
+    // Free trial: 7 days, USD 0.00 during the trial, then USD 49.90 / month.
+    // PREP_MONTHLY_PRICE_CENTS is the price after the trial; it is not
+    // charged automatically — see lib/subscription.ts.
+    trialDays: Math.max(1, envInt("PREP_TRIAL_DAYS", 7)),
+    trialPriceCents: Math.max(0, envInt("PREP_TRIAL_PRICE_CENTS", 0)),
+    monthlyPriceCents: Math.max(0, envInt("PREP_MONTHLY_PRICE_CENTS", 4990)),
     currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD",
     includedSkus: Math.max(0, envInt("PREP_INCLUDED_SKUS", 50)),
     overageBlockSize: envInt("PREP_OVERAGE_BLOCK_SIZE", 50),

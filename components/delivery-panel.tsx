@@ -39,7 +39,9 @@ export function DeliveryPanel({ id }: { id: string }) {
         <p className="text-sm">
           {audit.order.status === "refunded"
             ? "This payment was refunded or reversed. The prep pack is not available for download."
-            : "The full prep pack downloads only after a verified payment."}
+            : audit.trialStatus === "expired"
+              ? "Your 7-day free trial ended. Nothing was charged. The prep pack is locked again."
+              : "The full prep pack downloads during a 7-day free trial (USD 0.00, no card) or after a verified payment."}
         </p>
         <Button asChild><Link href={`/audit/${id}/checkout`}>Go to payment</Link></Button>
       </div>

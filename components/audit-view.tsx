@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Disclaimer } from "@/components/disclaimer"
 import { IntendedOffer } from "@/components/intended-offer"
+import { TrialPanel } from "@/components/trial-panel"
 import type { PublicAudit } from "@/lib/public-view"
 
 const DISPLAY: Record<string, string> = {
@@ -66,7 +67,7 @@ export function AuditView({ id }: { id: string }) {
       {audit.status === "needs_column_map" && audit.columnMap ? (
         <ColumnMap id={id} headers={audit.columnMap.headers} fields={audit.columnMap.fields} mapping={mapping} setMapping={setMapping} />
       ) : null}
-      {audit.status === "complete" || audit.status === "partial" ? <Results audit={audit} /> : null}
+      {audit.status === "complete" || audit.status === "partial" ? <Results id={id} audit={audit} /> : null}
       <PageList audit={audit} />
     </div>
   )
@@ -107,7 +108,7 @@ async function retry(id: string) {
   window.location.reload()
 }
 
-function Results({ audit }: { audit: PublicAudit }) {
+function Results({ id, audit }: { id: string; audit: PublicAudit }) {
   return (
     <>
       <Card>
@@ -215,6 +216,7 @@ function Results({ audit }: { audit: PublicAudit }) {
           <IntendedOffer />
         </CardContent>
       </Card>
+      {audit.order.status === "pending" ? <TrialPanel id={id} audit={audit} /> : null}
     </>
   )
 }

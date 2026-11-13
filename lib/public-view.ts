@@ -6,6 +6,8 @@ import { FEED_FIELDS, REQUIRED_FEED_FIELDS } from "@/lib/official/spec"
 import { incompleteRowCount } from "@/lib/feed/finalize"
 import { packScope } from "@/lib/pack/scope"
 import { paidCheckoutState, type PaidState } from "@/lib/paypal/ready"
+import { isTrialActive, trialDaysLeft, trialStatus, type TrialStatus } from "@/lib/subscription"
+import type { TrialState } from "@/lib/audit/types"
 
 export type PublicAudit = {
   id: string
@@ -46,12 +48,16 @@ export type PublicAudit = {
   incompleteRowCount: number
   supplements: SupplementTarget[]
   paid: boolean
+  trial?: TrialState
+  trialStatus: TrialStatus
+  trialDaysLeft: number
   skuCapNote: string
   paidCheckout: PaidState
 }
 
-export function toPublicAudit(audit: AuditRecord): PublicAudit {
-  const paid = orderUnlocksPack(audit.order.status)
+export function toPublicAudit(audit: AuditRecord, now = new Date()): PublicAudit {
+  const paid = orderUnlocksPack(audit.order.status) || isTrialActive(audit.trial, now)
+  const status = trialStatus(audit.trial, now)
   const scope = packScope(audit)
   return {
     id: audit.id,
@@ -101,6 +107,9 @@ export function toPublicAudit(audit: AuditRecord): PublicAudit {
     incompleteRowCount: incompleteRowCount(scope.rows),
     supplements: paid ? supplementTargets(audit) : [],
     paid,
+    trial: audit.trial,
+    trialStatus: status,
+    trialDaysLeft: trialDaysLeft(audit.trial, now),
     skuCapNote: scope.note,
     paidCheckout: paidCheckoutState(),
   }

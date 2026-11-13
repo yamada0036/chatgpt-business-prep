@@ -5,18 +5,21 @@ export const WAFFO_VERIFY_CONTENT = "56efef08aaf5a8144992e96465438566"
 export const SUPPORT_EMAIL = "praxora-ai@mail.grokbot.com"
 export const LEGAL_UPDATED = "12 November 2026"
 
-export const INTENDED_TRIAL_USD = "9.90"
+export const INTENDED_TRIAL_USD = "0.00"
 export const INTENDED_TRIAL_DAYS = 7
 export const INTENDED_MONTHLY_USD = "49.90"
 
 export const OFFER_NOT_FOR_SALE =
-  "Paid checkout is not available. This site does not charge a subscription and does not charge the earlier one-time pack."
+  "Paid checkout is not available yet. This site does not charge a subscription and does not charge the earlier one-time pack. The paid month after the free trial is not being charged."
 
 export const OFFER_INTENDED =
-  "The intended price, which is not being charged, is a 7-day paid trial for USD 9.90, then USD 49.90 per month. Amounts are in USD. The trial would be paid, not free."
+  "The price is a 7-day free trial for USD 0.00, then USD 49.90 per month. Amounts are in USD. The trial is free: no card is required to start it and nothing is charged during the 7 days. If you do nothing, the trial ends, the prep pack locks again, and nothing is charged. A paid month only starts if you explicitly start it after the trial."
+
+export const OFFER_FREE_TRIAL =
+  "Free trial: 7 days, USD 0.00. Start with an email only — no card, no PayPal payment during the trial. The full prep pack is downloadable during the trial. When the trial ends, access ends and no charge is made."
 
 export const OFFER_TERMS_GATE =
-  "Sales will not start until the subscription terms are published. Those terms are not published, because what a paid period includes, when a later charge would happen, how someone would cancel, and whether any fee is refundable are not decided."
+  "Paid monthly billing after the trial is not for sale yet. It will not start until the subscription terms are published and PayPal Subscriptions is wired up, because what a paid period includes, when a later charge would happen, how someone would cancel, and whether any fee is refundable are not decided. The free trial itself does not create a paid subscription."
 
 /** Matches the read path in lib/store. There is no separate deletion clock. */
 export const RETENTION_FACT =
@@ -122,7 +125,11 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
 
 export const PRICING_SECTIONS: LegalSection[] = [
   {
-    heading: "Not for sale",
+    heading: "Free trial",
+    paragraphs: [OFFER_FREE_TRIAL],
+  },
+  {
+    heading: "After the trial",
     paragraphs: [OFFER_NOT_FOR_SALE, OFFER_INTENDED, OFFER_TERMS_GATE],
   },
   {

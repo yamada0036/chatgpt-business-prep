@@ -24,7 +24,10 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PREP_BASE_PRICE_CENTS` | `4900` | Base pack price in cents. `$49.00` USD. |
+| `PREP_TRIAL_DAYS` | `7` | Free trial length in days. |
+| `PREP_TRIAL_PRICE_CENTS` | `0` | Trial price in cents. `0` = free trial, no charge. |
+| `PREP_MONTHLY_PRICE_CENTS` | `4990` | Pro price after the trial, in cents. `$49.90` USD / month. Not auto-charged — see below. |
+| `PREP_BASE_PRICE_CENTS` | `0` | Old one-time pack price. `0` while paid checkout is off. |
 | `PREP_CURRENCY` | `USD` | ISO currency shown next to the amount and sent to PayPal. |
 | `PREP_INCLUDED_SKUS` | `50` | Product rows included in the paid pack. |
 | `PREP_OVERAGE_BLOCK_SIZE` | `50` | Extra rows per overage block. Unused while the overage price is `0`. |
@@ -49,9 +52,17 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order. PayPal is created with that same `amountCents` and currency. The webhook accepts the capture only when the amount and currency still match.
 
+## Pricing — Free vs Pro, 7-day free trial
+
+Like ChatGPT's Free vs Plus page (`/pricing`): one product in two stages. **Free — 7-day free trial for USD 0.00**, full prep pack for 7 days, no card, nothing charged. **Pro — USD 49.90 / month** after the trial, only if the merchant explicitly continues. The free audit summary on the homepage stays free to run; it is what the trial starts from.
+
+- Trial: start with an email only — `POST /api/audits/:id/trial`. No card, no PayPal order, no charge during the 7 days. Code: `lib/subscription.ts` (`getPlans`, `startTrialState`, `trialStatus`), `lib/audit/checkout.ts` (`startFreeTrial`), `components/trial-panel.tsx`, `components/pricing-cards.tsx`.
+- One trial per audit. It unlocks the pack download for 7 days, then the pack locks again. Nothing is charged when it ends, and the trial cannot be restarted on the same audit.
+- After the trial, a paid month only starts if the merchant explicitly starts it. **This code does not auto-charge.** PayPal Subscriptions (plan + `BILLING.SUBSCRIPTION.*` webhooks) is not wired up yet — the current PayPal code is one-time Orders only, and paid checkout stays off.
+
 ## PayPal Checkout
 
-Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the intended USD 9.90 trial or USD 49.90 monthly price. The webhook route still exists and does not fulfill an order while checkout is off.
+Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the USD 49.90 monthly price. The old USD 9.90 paid trial is gone — the trial is now free (USD 0.00). The webhook route still exists and does not fulfill an order while checkout is off.
 
 The buyer pays on PayPal. This site does not render a card form and does not collect card numbers, bank details, or a PayPal password.
 

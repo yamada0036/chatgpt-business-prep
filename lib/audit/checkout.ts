@@ -9,6 +9,7 @@ import { getConfig } from "@/lib/config"
 import { updateAudit, writeVersionFiles } from "@/lib/store/audits"
 import { looksLikeEmail } from "@/lib/text"
 import { zipFileName } from "@/lib/time"
+import { isTrialActive, startTrialState } from "@/lib/subscription"
 
 /**
  * Settlement boundary. A live PayPal order becomes paid only in
@@ -63,6 +64,44 @@ export async function settleOrder(
       },
     }
     return publishVersion(withOrder, paidAt)
+  })
+}
+
+/**
+ * Start the 7-day free trial for one audit. Email only — no card, no
+ * PayPal order, no charge (chargedCents stays 0). One trial per audit:
+ * a second start is refused, and an expired trial cannot be restarted
+ * on the same audit. The trial unlocks the pack by publishing version 1;
+ * after `endsAt` the download route locks it again.
+ */
+export async function startFreeTrial(
+  id: string,
+  email: string,
+  now = new Date(),
+): Promise<AuditRecord> {
+  const nextEmail = email?.trim()
+  if (!nextEmail || !looksLikeEmail(nextEmail)) {
+    throw new Error("A contact email is required to start the free trial.")
+  }
+  return updateAudit(id, async (audit) => {
+    if (audit.status !== "complete" && audit.status !== "partial") {
+      throw new Error("The audit is not finished, so the free trial cannot start yet.")
+    }
+    if (orderUnlocksPack(audit.order.status)) return audit
+    if (audit.trial && isTrialActive(audit.trial, now)) return audit
+    if (audit.trial) {
+      throw new Error("This audit already used its one free trial. The trial cannot be restarted.")
+    }
+    const withTrial: AuditRecord = {
+      ...audit,
+      contactEmail: nextEmail,
+      trial: startTrialState(nextEmail, now),
+    }
+    // publishVersion marks the order "delivered" for the paid flow.
+    // A trial is not a payment, so keep the order pending: the trial
+    // field — not the order status — is what unlocks the pack.
+    const published = await publishVersion(withTrial, now)
+    return { ...published, order: { ...published.order, status: "pending" } }
   })
 }
 

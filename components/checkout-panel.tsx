@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Disclaimer } from "@/components/disclaimer"
 import { IntendedOffer } from "@/components/intended-offer"
 import { PayPalButtons } from "@/components/paypal-buttons"
+import { TrialPanel } from "@/components/trial-panel"
 import type { PublicAudit } from "@/lib/public-view"
 
 type CheckoutConfig = {
@@ -80,6 +81,7 @@ export function CheckoutPanel({
         <Disclaimer compact />
         <IntendedOffer showPricingLink />
         <p className="text-sm leading-6">This page does not collect card numbers, bank details, or a PayPal password.</p>
+        {audit.status === "complete" || audit.status === "partial" ? <TrialPanel id={id} audit={audit} /> : null}
       </div>
     )
   }
