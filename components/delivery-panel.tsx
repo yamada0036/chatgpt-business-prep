@@ -37,9 +37,11 @@ export function DeliveryPanel({ id }: { id: string }) {
       <div className="space-y-3">
         <h1 className="text-3xl font-semibold">Delivery is still locked</h1>
         <p className="text-sm">
-          {audit.order.status === "refunded"
-            ? "This payment was refunded or reversed. The prep pack is not available for download."
-            : "The full prep pack downloads only after a verified payment."}
+          {audit.order.status === "refunded" || audit.trialStatus === "cancelled"
+            ? "This access was refunded or cancelled. The prep pack is not available for download."
+            : audit.trialStatus === "expired"
+              ? `Your ${audit.offer.trialDays}-day free trial ended. Nothing was charged. The prep pack is locked again.`
+              : `The full prep pack downloads during a ${audit.offer.trialDays}-day free trial (${audit.offer.trialPriceLabel}, no card) in the browser that created the audit, or after a verified payment. Paid monthly billing is not for sale yet.`}
         </p>
         <Button asChild><Link href={`/audit/${id}/checkout`}>Go to payment</Link></Button>
       </div>
@@ -72,7 +74,12 @@ export function DeliveryPanel({ id }: { id: string }) {
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Prep pack</h1>
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
-        <p className="text-sm">Order status: {ORDER_LABEL[audit.order.status]}. This audit expires at {audit.expiresAt}. {RETENTION_FACT}</p>
+        <p className="text-sm">
+          {audit.trialStatus === "active"
+            ? `Free trial — ${audit.trialDaysLeft} day${audit.trialDaysLeft === 1 ? "" : "s"} left. Charged: ${audit.offer.trialPriceLabel}. Pro later would be ${audit.offer.monthlyPriceLabel} / month, and it is not for sale yet.`
+            : `Order status: ${ORDER_LABEL[audit.order.status]}.`}
+          {" "}This audit expires at {audit.expiresAt}. {RETENTION_FACT}
+        </p>
         {audit.skuCapNote ? <p className="text-sm">{audit.skuCapNote}</p> : null}
         <Disclaimer compact />
       </div>

@@ -5,20 +5,14 @@ import { publishVersion } from "@/lib/audit/checkout"
 import { emptyScore, emptySummary, type AuditRecord } from "@/lib/audit/types"
 import { buildProfile } from "@/lib/audit/profile"
 import { emptyFacts } from "@/lib/crawl/fetch-store"
+import { privacySections, termsSections } from "@/lib/legal/document"
 import {
-  INTENDED_MONTHLY_USD,
-  INTENDED_TRIAL_DAYS,
-  INTENDED_TRIAL_USD,
-  OFFER_INTENDED,
-  OFFER_NOT_FOR_SALE,
-  OFFER_TERMS_GATE,
-  PRIVACY_SECTIONS,
   RETENTION_FACT,
   SUPPORT_EMAIL,
-  TERMS_SECTIONS,
   WAFFO_VERIFY_CONTENT,
   WAFFO_VERIFY_NAME,
 } from "@/lib/legal/public"
+import { getPublicOffer } from "@/lib/offer"
 import { createDurableRepository, createMemoryMetadata, createMemoryObjectStore } from "@/lib/store/durable"
 import { readAudit, setAuditStoreForTests, writeAudit } from "@/lib/store/audits"
 
@@ -26,10 +20,15 @@ const pages = ["app/page.tsx", "app/terms/page.tsx", "app/privacy/page.tsx", "ap
 
 describe("public legal copy", () => {
   it("states the intended subscription as not for sale and omits undecided commercial rules", () => {
-    const text = [OFFER_NOT_FOR_SALE, OFFER_INTENDED, OFFER_TERMS_GATE, ...TERMS_SECTIONS.flatMap((section) => section.paragraphs), ...PRIVACY_SECTIONS.flatMap((section) => section.paragraphs)].join("\n")
-    expect(text).toContain(`USD ${INTENDED_TRIAL_USD}`)
-    expect(text).toContain(`${INTENDED_TRIAL_DAYS}-day`)
-    expect(text).toContain(`USD ${INTENDED_MONTHLY_USD}`)
+    process.env.PREP_TRIAL_DAYS = "7"
+    process.env.PREP_TRIAL_PRICE_CENTS = "0"
+    process.env.PREP_MONTHLY_PRICE_CENTS = "4990"
+    process.env.PREP_CURRENCY = "USD"
+    const offer = getPublicOffer()
+    const text = [offer.notForSale, offer.intended, offer.termsGate, ...termsSections(offer).flatMap((section) => section.paragraphs), ...privacySections(offer).flatMap((section) => section.paragraphs)].join("\n")
+    expect(text).toContain(offer.trialPriceLabel)
+    expect(text).toContain(`${offer.trialDays}-day`)
+    expect(text).toContain(offer.monthlyPriceLabel)
     expect(text).toContain("not being charged")
     expect(text).toContain(SUPPORT_EMAIL)
     expect(text).toContain(RETENTION_FACT)

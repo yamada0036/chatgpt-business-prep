@@ -12,6 +12,7 @@ import {
 export function createMemoryMetadata(): MetadataStore {
   const rows = new Map<string, { record: AuditRecord; generation: string }>()
   const captures = new Map<string, string>()
+  const slots = new Map<string, string>()
   return {
     async prepare() {},
     async get(id) {
@@ -46,6 +47,17 @@ export function createMemoryMetadata(): MetadataStore {
     },
     async auditIdForCapture(captureId) {
       return captures.get(captureId) ?? null
+    },
+    async claimSlot(slotId, auditId) {
+      const current = slots.get(slotId)
+      if (!current) {
+        slots.set(slotId, auditId)
+        return "owned"
+      }
+      return current === auditId ? "owned" : "conflict"
+    },
+    async releaseSlot(slotId, auditId) {
+      if (slots.get(slotId) === auditId) slots.delete(slotId)
     },
   }
 }
@@ -156,6 +168,12 @@ export function createDurableRepository(deps: {
     },
     auditIdForCapture(captureId) {
       return deps.metadata.auditIdForCapture(captureId)
+    },
+    claimTrialSlot(slotId, auditId) {
+      return deps.metadata.claimSlot(slotId, auditId)
+    },
+    releaseTrialSlot(slotId, auditId) {
+      return deps.metadata.releaseSlot(slotId, auditId)
     },
   }
 }

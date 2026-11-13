@@ -1,4 +1,5 @@
-import { orderUnlocksPack } from "@/lib/audit/types"
+import { canDownloadPack, OWNER_REQUIRED } from "@/lib/access"
+import { ownerTokenMatches, readOwnerToken } from "@/lib/owner"
 import { ERROR_MESSAGES, PACK_FILES } from "@/lib/official/spec"
 import { readAudit, readVersionFile } from "@/lib/store/audits"
 
@@ -17,7 +18,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params
   const audit = await readAudit(id)
   if (!audit) return Response.json({ error: { code: "not_found", message: ERROR_MESSAGES.not_found } }, { status: 404 })
-  if (!orderUnlocksPack(audit.order.status)) {
+  if (!ownerTokenMatches(audit.ownerSecretHash, readOwnerToken(request, id))) {
+    return Response.json({ error: { code: "forbidden", message: OWNER_REQUIRED } }, { status: 403 })
+  }
+  if (!canDownloadPack(audit)) {
     return Response.json({ error: { code: "unpaid", message: ERROR_MESSAGES.unpaid } }, { status: 403 })
   }
   const url = new URL(request.url)

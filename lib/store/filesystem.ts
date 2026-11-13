@@ -3,7 +3,7 @@ import path from "node:path"
 import type { AuditRecord } from "@/lib/audit/types"
 import { getConfig } from "@/lib/config"
 import { assertAuditId } from "@/lib/store/audits-id"
-import { allowedVersionFile, type AuditRepository } from "@/lib/store/repository"
+import { allowedVersionFile, assertTrialSlotId, type AuditRepository } from "@/lib/store/repository"
 
 const locks = new Map<string, Promise<unknown>>()
 const CAPTURE_ID = /^[A-Za-z0-9]+$/
@@ -110,7 +110,58 @@ export function createFilesystemRepository(): AuditRepository {
       const index = await readCaptureIndex()
       return index[captureId] ?? null
     },
+    claimTrialSlot(slotId, auditId) {
+      const id = assertTrialSlotId(slotId)
+      return withSlotLock(async () => {
+        const slots = await readTrialSlots()
+        const current = slots[id]
+        if (!current) {
+          slots[id] = auditId
+          await writeTrialSlots(slots)
+          return "owned"
+        }
+        return current === auditId ? "owned" : "conflict"
+      })
+    },
+    releaseTrialSlot(slotId, auditId) {
+      const id = assertTrialSlotId(slotId)
+      return withSlotLock(async () => {
+        const slots = await readTrialSlots()
+        if (slots[id] !== auditId) return
+        delete slots[id]
+        await writeTrialSlots(slots)
+      })
+    },
   }
+}
+
+function trialSlotFile(): string {
+  return path.join(getConfig().dataDir, "trial-slots.json")
+}
+
+async function readTrialSlots(): Promise<Record<string, string>> {
+  try {
+    const parsed = JSON.parse(await readFile(trialSlotFile(), "utf8")) as unknown
+    if (!parsed || typeof parsed !== "object") return {}
+    return parsed as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+async function writeTrialSlots(slots: Record<string, string>): Promise<void> {
+  await mkdir(getConfig().dataDir, { recursive: true })
+  const file = trialSlotFile()
+  const tmp = `${file}.tmp`
+  await writeFile(tmp, JSON.stringify(slots), "utf8")
+  await rename(tmp, file)
+}
+
+function withSlotLock<T>(work: () => Promise<T>): Promise<T> {
+  const previous = locks.get("trial-slots") ?? Promise.resolve()
+  const run = previous.catch(() => undefined).then(work)
+  locks.set("trial-slots", run)
+  return run
 }
 
 async function purgeExpired(): Promise<void> {

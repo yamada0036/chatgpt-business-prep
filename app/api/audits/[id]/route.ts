@@ -1,7 +1,7 @@
 import { withQuote } from "@/lib/audit/compose"
 import { isAuditRunning } from "@/lib/audit/run"
 import { getConfig } from "@/lib/config"
-import { toPublicAudit } from "@/lib/public-view"
+import { presentAudit } from "@/lib/present"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
 import { readAudit, updateAudit } from "@/lib/store/audits"
 
@@ -26,7 +26,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       audit = await updateAudit(audit.id, (current) => withQuote(current))
     }
   }
-  return Response.json(toPublicAudit(audit))
+  return Response.json(presentAudit(audit))
   } catch {
     return Response.json(
       { error: { code: "storage", message: "The audit could not be read. Try again in a moment." } },

@@ -104,6 +104,26 @@ export type ScoreResult = {
 
 export type Eligibility = { agent: string; local: string; market: string }
 
+/**
+ * Free trial, per audit. One trial per audit, started with an email only.
+ * No card, no PayPal order, no charge during the trial (chargedCents is 0).
+ * When `endsAt` passes the trial is expired and the pack locks again;
+ * nothing is auto-charged — a paid month only starts if the merchant
+ * explicitly starts it afterwards (PayPal Subscriptions, not wired yet).
+ */
+export type TrialState = {
+  status: "active" | "cancelled"
+  email: string
+  startedAt: string
+  endsAt: string
+  trialDays: number
+  trialPriceCents: number
+  monthlyPriceCents: number
+  currency: string
+  chargedCents: number
+  cancelledAt?: string
+}
+
 export type OrderStatus = "pending" | "paid" | "delivered" | "failed" | "refunded"
 
 export function orderUnlocksPack(status: OrderStatus): boolean {
@@ -220,6 +240,12 @@ export type AuditRecord = {
   eligibility: Eligibility
   score: ScoreResult
   order: Order
+  /**
+   * SHA-256 of the owner token issued to the browser that created this audit.
+   * Absent on audits created before owner locking. Never copy this into a public response.
+   */
+  ownerSecretHash?: string
+  trial?: TrialState
   versions: VersionMeta[]
   upload?: UploadData
   partialReason?: string

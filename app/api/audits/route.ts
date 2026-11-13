@@ -3,6 +3,7 @@ import { enqueueAudit } from "@/lib/audit/run"
 import { emptyScore, emptySummary, initialSteps, type AuditRecord, type OutputLanguage } from "@/lib/audit/types"
 import { getConfig } from "@/lib/config"
 import { parseProductFile } from "@/lib/feed/parse-upload"
+import { createOwnerToken, ownerCookieHeader, requestIsHttps } from "@/lib/owner"
 import { quotePrice } from "@/lib/pricing"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
 import { logEvent, StorageError, writeAudit } from "@/lib/store/audits"
@@ -44,8 +45,10 @@ export async function POST(request: Request) {
     upload = parsed.upload
   }
   const now = new Date()
+  const owner = createOwnerToken()
   const audit: AuditRecord = {
     id: randomUUID(),
+    ownerSecretHash: owner.hash,
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + config.retentionDays * 86_400_000).toISOString(),
     retentionDays: config.retentionDays,
@@ -84,5 +87,10 @@ export async function POST(request: Request) {
   }
   logEvent("audit_created", { id: audit.id, feed: includeProductFeed, agent: includeAgentPack, rows: upload?.records.length ?? 0 })
   enqueueAudit(audit.id)
-  return Response.json({ id: audit.id })
+  const headers = new Headers()
+  headers.set(
+    "set-cookie",
+    ownerCookieHeader(audit.id, owner.token, config.retentionDays * 86_400, requestIsHttps(request)),
+  )
+  return Response.json({ id: audit.id }, { headers })
 }

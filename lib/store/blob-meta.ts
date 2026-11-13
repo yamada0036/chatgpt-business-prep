@@ -1,12 +1,12 @@
 import type { AuditRecord } from "@/lib/audit/types"
 import { assertAuditId } from "@/lib/store/audits-id"
-import { auditJsonPath, capturePointerPath, type MetadataStore } from "@/lib/store/repository"
+import { assertTrialSlotId, auditJsonPath, capturePointerPath, trialSlotPath, type MetadataStore } from "@/lib/store/repository"
 
 const CAPTURE_ID = /^[A-Za-z0-9]+$/
 
 export type JsonBlob = {
   read(pathname: string): Promise<{ text: string; etag: string } | null>
-  write(pathname: string, text: string, contentType: string, options?: { ifMatch?: string }): Promise<void>
+  write(pathname: string, text: string, contentType: string, options?: { ifMatch?: string; exclusiveCreate?: boolean }): Promise<void>
   removePrefix(prefix: string): Promise<void>
   list(prefix: string): Promise<string[]>
 }
@@ -21,6 +21,11 @@ export function createMemoryJsonBlob(): JsonBlob {
     },
     async write(pathname, text, _contentType, options) {
       const current = files.get(pathname)
+      if (options?.exclusiveCreate && current) {
+        const error = new Error("blob already exists")
+        error.name = "BlobAlreadyExistsError"
+        throw error
+      }
       if (options?.ifMatch && (!current || current.etag !== options.ifMatch)) {
         const error = new Error("etag mismatch")
         error.name = "BlobPreconditionFailedError"
@@ -44,6 +49,43 @@ function preconditionFailed(error: unknown): boolean {
   const name = "name" in error ? String(error.name) : ""
   const message = "message" in error ? String(error.message) : ""
   return name === "BlobPreconditionFailedError" || /precondition failed|etag mismatch/i.test(message)
+}
+
+function alreadyExists(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const name = "name" in error ? String(error.name) : ""
+  const message = "message" in error ? String(error.message) : ""
+  return name === "BlobAlreadyExistsError" || /already exists/i.test(message)
+}
+
+async function claimBlobSlot(blobs: JsonBlob, slotId: string, auditId: string): Promise<"owned" | "conflict"> {
+  const pathname = trialSlotPath(assertTrialSlotId(slotId))
+  const readOwner = async (): Promise<string | null> => {
+    const hit = await blobs.read(pathname)
+    if (!hit) return null
+    const parsed = JSON.parse(hit.text) as { auditId?: string }
+    return typeof parsed.auditId === "string" ? parsed.auditId : null
+  }
+  const current = await readOwner()
+  if (current) return current === auditId ? "owned" : "conflict"
+  try {
+    await blobs.write(pathname, JSON.stringify({ auditId }), "application/json", { exclusiveCreate: true })
+    return "owned"
+  } catch (error) {
+    if (!alreadyExists(error)) throw error
+    const winner = await readOwner()
+    if (!winner) return claimBlobSlot(blobs, slotId, auditId)
+    return winner === auditId ? "owned" : "conflict"
+  }
+}
+
+async function releaseBlobSlot(blobs: JsonBlob, slotId: string, auditId: string): Promise<void> {
+  const pathname = trialSlotPath(assertTrialSlotId(slotId))
+  const hit = await blobs.read(pathname)
+  if (!hit) return
+  const parsed = JSON.parse(hit.text) as { auditId?: string }
+  if (parsed.auditId !== auditId) return
+  await blobs.removePrefix(pathname)
 }
 
 export function createBlobMetadata(blobs: JsonBlob): MetadataStore {
@@ -95,6 +137,12 @@ export function createBlobMetadata(blobs: JsonBlob): MetadataStore {
       if (!CAPTURE_ID.test(captureId)) return null
       const hit = await blobs.read(capturePointerPath(captureId))
       return hit?.text ?? null
+    },
+    claimSlot(slotId, auditId) {
+      return claimBlobSlot(blobs, slotId, auditId)
+    },
+    releaseSlot(slotId, auditId) {
+      return releaseBlobSlot(blobs, slotId, auditId)
     },
   }
 }

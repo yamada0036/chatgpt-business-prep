@@ -1,7 +1,7 @@
 import { finishFromCrawl } from "@/lib/audit/run"
 import { mappingFromHeaders } from "@/lib/feed/columns"
 import { ERROR_MESSAGES } from "@/lib/official/spec"
-import { toPublicAudit } from "@/lib/public-view"
+import { presentAudit } from "@/lib/present"
 import { readAudit, updateAudit } from "@/lib/store/audits"
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -22,5 +22,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }))
   await finishFromCrawl(id)
   const next = await readAudit(id)
-  return Response.json(next ? toPublicAudit(next) : { id })
+  return Response.json(next ? presentAudit(next) : { id })
 }

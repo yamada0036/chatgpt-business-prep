@@ -24,7 +24,10 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PREP_BASE_PRICE_CENTS` | `4900` | Base pack price in cents. `$49.00` USD. |
+| `PREP_TRIAL_DAYS` | `7` | Free trial length in days. |
+| `PREP_TRIAL_PRICE_CENTS` | `0` | Trial price in cents. `0` = free trial, no charge. |
+| `PREP_MONTHLY_PRICE_CENTS` | `4990` | Pro price after the trial, in cents. `$49.90` USD / month. Not auto-charged — see below. |
+| `PREP_BASE_PRICE_CENTS` | `0` | Old one-time pack price. `0` while paid checkout is off. |
 | `PREP_CURRENCY` | `USD` | ISO currency shown next to the amount and sent to PayPal. |
 | `PREP_INCLUDED_SKUS` | `50` | Product rows included in the paid pack. |
 | `PREP_OVERAGE_BLOCK_SIZE` | `50` | Extra rows per overage block. Unused while the overage price is `0`. |
@@ -49,9 +52,19 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order. PayPal is created with that same `amountCents` and currency. The webhook accepts the capture only when the amount and currency still match.
 
+## Pricing — Free vs Pro, 7-day free trial
+
+Like ChatGPT's Free vs Plus page (`/pricing`): one product in two stages. **Free — 7-day free trial for USD 0.00**, full prep pack for 7 days, no card, nothing charged. **Pro — USD 49.90 / month** after the trial, only if the merchant explicitly continues. The free audit summary on the homepage stays free to run; it is what the trial starts from.
+
+- Trial: `POST /api/audits/:id/trial` with the owner cookie set when the audit was created (`HttpOnly`, not an email verification). A blank `contact_email` keeps the address already stored on the audit. No card, no PayPal order, no charge during the trial. Code: `lib/offer.ts` (server prices), `lib/subscription.ts` (trial state), `lib/audit/checkout.ts` (`startFreeTrial`), `components/trial-panel.tsx`, `components/pricing-cards.tsx`.
+- The browser that creates the audit is the only one that can start the trial or download the pack. A shared audit link still shows the free summary. Audits created before this cookie have no owner hash: they cannot start a trial or download, and the server does not mint a replacement credential for whoever opens the link. Start a new audit in this browser. Losing the cookie means the same thing: the summary remains, the pack does not.
+- One trial per audit. A second slot is stored for the normalized store URL (`www`, trailing slash, and tracking parameters folded together) and for the email string. Those slots survive the 30-day audit retention. An expired trial cannot be restarted on the same audit, the same normalized store, or the same email string.
+- Remaining limits: the email is not verified, so a different email string is a different slot. A different domain is a different store. The first owner who starts a trial for a store consumes that store's slot, including someone who audits a public URL they do not operate. There is no admin reset in this version.
+- After the trial, a paid month only starts if the merchant explicitly starts it. **This code does not auto-charge.** PayPal Subscriptions (plan + `BILLING.SUBSCRIPTION.*` webhooks) is not wired up yet — the current PayPal code is one-time Orders only, and paid checkout stays off. `PREP_MONTHLY_PRICE_CENTS` is the price shown for that future month. It is not sent to PayPal.
+
 ## PayPal Checkout
 
-Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the intended USD 9.90 trial or USD 49.90 monthly price. The webhook route still exists and does not fulfill an order while checkout is off.
+Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the USD 49.90 monthly price. The old USD 9.90 paid trial is gone — the trial is now free (USD 0.00). The webhook route still exists and does not fulfill an order while checkout is off.
 
 The buyer pays on PayPal. This site does not render a card form and does not collect card numbers, bank details, or a PayPal password.
 
@@ -59,22 +72,22 @@ Checkout creates the order on the server with the Orders API, `intent: CAPTURE`.
 
 If storage is not durable, paid checkout returns an error and does not create a PayPal order. Local development without PayPal credentials can still use the labeled simulated buttons. Those buttons are refused when PayPal credentials are set, when `PAYPAL_ENV=live`, and on a production deployment that has a price. Homepage fixture buttons are hidden in production and whenever `PAYPAL_ENV=live`.
 
-A catalog with more than 50 product rows still costs $49. The paid CSV includes the first 50. The audit page, checkout page, delivery page, and `00-readme.md` say that the rest are not in the pack.
+A catalog with more than `PREP_INCLUDED_SKUS` rows (default 50) does not add an SKU charge. The pack includes the first 50. The audit page, checkout page, delivery page, and `00-readme.md` say that the rest are not in the pack. The monthly figure on the pricing page is not that charge.
 
 ### Sandbox
 
 1. In the PayPal developer dashboard, create a sandbox REST app and copy the client id and secret into `.env.local`.
-2. Set `PAYPAL_ENV=sandbox`, `PREP_BASE_PRICE_CENTS=4900`, and `PREP_CURRENCY=USD`.
+2. Leave `PREP_BASE_PRICE_CENTS=0`. Setting PayPal keys, `PAYPAL_ENV=sandbox`, or `PREP_MONTHLY_PRICE_CENTS` does not create an order and does not charge the USD 49.90 monthly price. Paid checkout stays off until subscription billing is implemented. Do not point this sandbox list at a live account.
 3. Set `BLOB_READ_WRITE_TOKEN` (or `BLOB_STORE_ID` on Vercel). That private Blob store holds the audit record and the pack files. `DATABASE_URL` is optional and is not required.
 4. Run the app on a URL PayPal can reach. For local sandbox, expose it with a tunnel and set `PREP_PUBLIC_URL` to that origin.
 5. In the sandbox app, add a webhook. The URL to register is `https://<your-domain>/api/paypal/webhook`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.REFUNDED`, and `PAYMENT.CAPTURE.REVERSED`.
 6. Copy the webhook id into `PAYPAL_WEBHOOK_ID`.
-7. Run an audit, pay with a sandbox personal account, and return to `/audit/<id>/checkout/return`. The pack stays locked until the webhook is verified. Then the delivery page can download the zip.
-8. Opening the return URL, or calling the capture route, without that webhook does not unlock the download.
+7. Do not expect a sandbox payment to succeed. The PayPal route returns 403 and no order is created. The free trial is the path that unlocks a pack, and only in the browser that created the audit.
+8. Opening the return URL, or calling the capture route, does not unlock the download. The webhook route answers `checkout_disabled` and does not fulfill.
 
 ### Live
 
-Create a live REST app. Set `PAYPAL_ENV=live`, replace the client id, secret, and webhook id with the live values, and register the same path on the live app: `https://<your-production-domain>/api/paypal/webhook`. Confirm the private Blob token is set on that deployment. `PREP_ALLOW_LOOPBACK` is forced off in this mode. Redeploy only after those values are in the host's environment, not in git. If the PayPal variables are missing, the free audit still runs and paid checkout says it is coming soon.
+Do not set `PAYPAL_ENV=live` to start charging. Live keys do not enable checkout. When subscription billing exists, create a live REST app, set `PAYPAL_ENV=live`, replace the client id, secret, and webhook id with the live values, and register the same path on the live app: `https://<your-production-domain>/api/paypal/webhook`. Confirm the private Blob token is set on that deployment. `PREP_ALLOW_LOOPBACK` is forced off in this mode. Redeploy only after those values are in the host's environment, not in git. If the PayPal variables are missing, the free audit still runs and paid checkout stays unavailable.
 
 ## What the merchant gets
 

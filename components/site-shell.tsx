@@ -11,7 +11,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <span className="block text-lg font-semibold tracking-tight">Prep</span>
           </Link>
           <nav className="flex shrink-0 gap-4 text-sm">
-            <Link href="/" className="hover:underline">Audit</Link>
+            <Link href="/" className="hover:underline">Home</Link>
+            <Link href="/pricing" className="hover:underline">Pricing</Link>
             <Link href="/help" className="hover:underline">Score and limits</Link>
           </nav>
         </div>

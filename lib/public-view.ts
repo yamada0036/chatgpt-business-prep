@@ -1,11 +1,13 @@
-import type { AuditRecord, SupplementTarget } from "@/lib/audit/types"
-import { orderUnlocksPack } from "@/lib/audit/types"
+import type { AuditRecord, SupplementTarget, TrialState } from "@/lib/audit/types"
+import { canDownloadPack } from "@/lib/access"
 import { profileCounts } from "@/lib/audit/score"
 import { excerpt } from "@/lib/audit/profile"
 import { FEED_FIELDS, REQUIRED_FEED_FIELDS } from "@/lib/official/spec"
 import { incompleteRowCount } from "@/lib/feed/finalize"
 import { packScope } from "@/lib/pack/scope"
 import { paidCheckoutState, type PaidState } from "@/lib/paypal/ready"
+import { documentedOffer, type PublicOffer } from "@/lib/plan"
+import { trialDaysLeft, trialStatus, type TrialStatus } from "@/lib/subscription"
 
 export type PublicAudit = {
   id: string
@@ -46,12 +48,26 @@ export type PublicAudit = {
   incompleteRowCount: number
   supplements: SupplementTarget[]
   paid: boolean
+  /** Trial record without the email address. */
+  trial?: PublicTrial
+  trialStatus: TrialStatus
+  trialDaysLeft: number
+  offer: PublicOffer
   skuCapNote: string
   paidCheckout: PaidState
 }
 
-export function toPublicAudit(audit: AuditRecord): PublicAudit {
-  const paid = orderUnlocksPack(audit.order.status)
+export type PublicTrial = Omit<TrialState, "email">
+
+export function publicTrial(trial: TrialState): PublicTrial {
+  const { email: _email, ...rest } = trial
+  return rest
+}
+
+export function toPublicAudit(audit: AuditRecord, now = new Date(), offer?: PublicOffer): PublicAudit {
+  const paid = canDownloadPack(audit, now)
+  const status = trialStatus(audit.trial, now)
+  const shownOffer = offer ?? documentedOffer()
   const scope = packScope(audit)
   return {
     id: audit.id,
@@ -101,6 +117,10 @@ export function toPublicAudit(audit: AuditRecord): PublicAudit {
     incompleteRowCount: incompleteRowCount(scope.rows),
     supplements: paid ? supplementTargets(audit) : [],
     paid,
+    trial: audit.trial ? publicTrial(audit.trial) : undefined,
+    trialStatus: status,
+    trialDaysLeft: trialDaysLeft(audit.trial, now),
+    offer: shownOffer,
     skuCapNote: scope.note,
     paidCheckout: paidCheckoutState(),
   }
