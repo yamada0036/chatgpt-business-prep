@@ -1,4 +1,5 @@
 import { SCORE_EXPLANATION, OFFICIAL_LINKS, DISCLAIMER_BLOCKS } from "@/lib/official/spec"
+import { RETENTION_FACT } from "@/lib/legal/public"
 import { showFixtureButtons } from "@/lib/site-mode"
 
 export default function HelpPage() {
@@ -9,7 +10,7 @@ export default function HelpPage() {
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">Default limits</h2>
         <p className="leading-7 text-muted-foreground">
-          A free audit fetches at most 30 product pages by default, and an uploaded sheet is read up to 1,000 rows. The paid pack includes the first 50 product rows when there is no overage price. Rows past either cap are counted and are not dropped silently. An audit stops after about 110 seconds by default, returns the part that finished, and can be retried. Crawl results and prep packs are kept for 30 days, then deleted. These numbers are environment variables. See the README.
+          A free audit fetches at most 30 product pages by default, and an uploaded sheet is read up to 1,000 rows. Rows past that upload cap are counted and are not dropped silently. An audit stops after about 110 seconds by default, returns the part that finished, and can be retried. {RETENTION_FACT} The crawl limits are environment variables. See the README.
         </p>
       </section>
       <section className="space-y-2">

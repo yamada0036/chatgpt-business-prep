@@ -22,6 +22,10 @@ export async function settleOrder(
   action: "pay" | "fail",
   email?: string,
 ): Promise<AuditRecord> {
+  void id
+  void action
+  void email
+  throw new Error("Paid checkout is not available. No charge is created.")
   if (!getConfig().allowSimulatedPay) {
     throw new Error("Simulated payment is disabled. Pay with PayPal Checkout. The return URL does not mark an order paid.")
   }

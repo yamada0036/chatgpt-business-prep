@@ -18,7 +18,12 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
       <footer className="border-t border-border/80">
-        <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+          <nav className="flex flex-wrap gap-4 text-sm">
+            <Link href="/terms" className="underline">Terms</Link>
+            <Link href="/privacy" className="underline">Privacy</Link>
+            <Link href="/pricing" className="underline">Pricing</Link>
+          </nav>
           <Disclaimer />
         </div>
       </footer>

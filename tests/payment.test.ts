@@ -15,7 +15,7 @@ import { payPalValueToCents } from "@/lib/paypal/money"
 import { applyPayPalWebhook } from "@/lib/paypal/apply"
 import { setPayPalFetchForTests } from "@/lib/paypal/client"
 import type { PayPalEvent } from "@/lib/paypal/decide"
-import { createPayPalCheckout, observePayPalCapture } from "@/lib/paypal/orders"
+import { createPayPalCheckout } from "@/lib/paypal/orders"
 import { quotePrice } from "@/lib/pricing"
 import { toPublicAudit } from "@/lib/public-view"
 import { showFixtureButtons } from "@/lib/site-mode"
@@ -167,7 +167,7 @@ afterEach(() => {
 })
 
 describe("PayPal checkout acceptance", () => {
-  it("charges 49.00 USD and unlocks the pack only after a verified capture webhook", async () => {
+  it("does not create a PayPal charge or unlock a pack from checkout", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "prep-deploy-"))
     process.env.PREP_DATA_DIR = dir
     await writeFile(path.join(dir, "ephemeral.txt"), "wiped on deploy")
@@ -182,114 +182,38 @@ describe("PayPal checkout acceptance", () => {
     expect(JSON.stringify(unpaid)).not.toContain("FULL DRAFT")
     expect((await download(seeded.id, "03-product-feed.csv")).status).toBe(403)
 
-    const created = await createPayPalCheckout({
+    await expect(createPayPalCheckout({
       id: seeded.id,
       email: "merchant@harbor.example",
       origin: "https://prep.example",
-    })
-    expect(created.order.status).toBe("pending")
-    expect(created.order.paypalAmountCents).toBe(4900)
-    expect(created.order.paypalCurrency).toBe("USD")
-    const createCall = calls.find((call) => call.url.endsWith("/v2/checkout/orders"))
-    const createBody = createCall?.body as {
-      intent: string
-      purchase_units: { custom_id: string; amount: { currency_code: string; value: string } }[]
-    }
-    expect(createBody.intent).toBe("CAPTURE")
-    expect(createBody.purchase_units[0].amount).toEqual({ currency_code: "USD", value: "49.00" })
-    expect(createBody.purchase_units[0].custom_id).toBe(seeded.id)
-
-    const captured = await observePayPalCapture(seeded.id, "ORDER123")
-    expect(captured.order.status).toBe("pending")
-    expect(captured.versions).toHaveLength(0)
-    expect(captured.order.paypalAwaitingWebhook).toBe(true)
-    const captureResponse = await captureRoute(
-      new Request("http://local/capture", { method: "POST", body: JSON.stringify({ paypal_order_id: "ORDER123" }) }),
-      { params: Promise.resolve({ id: seeded.id }) },
-    )
-    const captureJson = (await captureResponse.json()) as { paid: boolean }
-    expect(captureJson.paid).toBe(false)
-    expect((await download(seeded.id)).status).toBe(403)
-
-    const paid = await applyPayPalWebhook({
+    })).rejects.toThrow(/not available/)
+    expect(calls).toHaveLength(0)
+    const captureResponse = await captureRoute()
+    expect(captureResponse.status).toBe(403)
+    const blocked = await applyPayPalWebhook({
       headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(captured)),
+      rawBody: JSON.stringify(completedEvent(seeded)),
     })
-    expect(paid.status).toBe(200)
-    expect(paid.body.fulfilled).toBe(true)
+    expect(blocked.body.fulfilled).toBe(false)
+    expect(blocked.body.reason).toBe("checkout_disabled")
     const stored = await readAudit(seeded.id)
-    expect(stored?.order.status).toBe("delivered")
-    expect(stored?.order.chargedCents).toBe(4900)
-    expect(stored?.versions).toHaveLength(1)
-    const zipResponse = await download(seeded.id)
-    expect(zipResponse.status).toBe(200)
-    expect(zipResponse.headers.get("content-type")).toContain("zip")
-    const zip = await JSZip.loadAsync(Buffer.from(await zipResponse.arrayBuffer()))
-    expect(Object.keys(zip.files)).toEqual(
-      expect.arrayContaining(["00-readme.md", "01-claim-checklist.md", "02-profile-draft.md", "03-product-feed.csv", "03-product-feed-issues.csv"]),
-    )
-
-    const replay = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(stored!)),
-    })
-    expect(replay.status).toBe(200)
-    expect(replay.body.fulfilled).toBe(false)
-    expect((await readAudit(seeded.id))?.versions).toHaveLength(1)
+    expect(stored?.order.status).toBe("pending")
+    expect(stored?.versions).toHaveLength(0)
+    expect((await download(seeded.id)).status).toBe(403)
 
     await rm(dir, { recursive: true, force: true })
     await expect(readFile(path.join(dir, "ephemeral.txt"))).rejects.toThrow()
-    const surviving = await readVersionFile(seeded.id, 1, "pack.zip")
-    expect(surviving?.byteLength).toBeGreaterThan(10)
   })
 
-  it("rejects a bad signature, amount, currency, or order id", async () => {
+  it("does not mark an order paid from a webhook while checkout is off", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    const created = await createPayPalCheckout({ id: seeded.id, origin: "https://prep.example" })
-
-    verifyStatus = "FAILURE"
-    const badSignature = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(created)),
-    })
-    expect(badSignature.status).toBe(400)
-    expect(badSignature.body.reason).toBe("signature")
-    expect((await readAudit(seeded.id))?.order.status).toBe("pending")
-    expect((await readAudit(seeded.id))?.versions).toHaveLength(0)
-
-    setPayPalFetchForTests(async () => {
-      throw new Error("cert url must not be fetched")
-    })
-    const badCert = await applyPayPalWebhook({
+    const blocked = await applyPayPalWebhook({
       headers: signedHeaders("https://evil.example/cert"),
-      rawBody: JSON.stringify(completedEvent(created)),
+      rawBody: JSON.stringify(completedEvent(seeded, { amount: { currency_code: "EUR", value: "50.00" } })),
     })
-    expect(badCert.status).toBe(400)
-    expect((await readAudit(seeded.id))?.versions).toHaveLength(0)
-    setPayPalFetchForTests(paypalFetch)
-    verifyStatus = "SUCCESS"
-
-    const wrongAmount = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(created, { amount: { currency_code: "USD", value: "50.00" } })),
-    })
-    expect(wrongAmount.body.fulfilled).toBe(false)
-    expect(wrongAmount.body.reason).toBe("amount")
-
-    const wrongCurrency = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(created, { amount: { currency_code: "EUR", value: "49.00" } })),
-    })
-    expect(wrongCurrency.body.reason).toBe("currency")
-
-    const wrongOrder = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(
-        completedEvent(created, { supplementary_data: { related_ids: { order_id: "OTHER-ORDER" } } }),
-      ),
-    })
-    expect(wrongOrder.body.reason).toBe("order")
+    expect(blocked.body.fulfilled).toBe(false)
+    expect(blocked.body.reason).toBe("checkout_disabled")
     expect((await readAudit(seeded.id))?.order.status).toBe("pending")
     expect((await readAudit(seeded.id))?.versions).toHaveLength(0)
     expect(payPalValueToCents("49.00")).toBe(4900)
@@ -297,58 +221,19 @@ describe("PayPal checkout acceptance", () => {
     expect(payPalValueToCents("49.0")).toBeNull()
   })
 
-  it("does not fulfill pending or denied captures, and a refund locks the pack", async () => {
+  it("leaves an unpaid audit unpaid when a capture webhook arrives", async () => {
     const seeded = makeAudit()
     await writeAudit(seeded)
-    const created = await createPayPalCheckout({ id: seeded.id, origin: "https://prep.example" })
     const pending = await applyPayPalWebhook({
       headers: signedHeaders(),
       rawBody: JSON.stringify({
         event_type: "PAYMENT.CAPTURE.PENDING",
-        resource: { ...completedEvent(created).resource, status: "PENDING" },
+        resource: { id: "CAP123", status: "PENDING", custom_id: seeded.id },
       }),
     })
     expect(pending.body.fulfilled).toBe(false)
     expect((await readAudit(seeded.id))?.order.status).toBe("pending")
-
-    const denied = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify({
-        event_type: "PAYMENT.CAPTURE.DENIED",
-        resource: completedEvent(created).resource,
-      }),
-    })
-    expect(denied.body.fulfilled).toBe(false)
-    expect((await readAudit(seeded.id))?.order.status).toBe("failed")
-    expect((await readAudit(seeded.id))?.versions).toHaveLength(0)
-
-    await writeAudit({ ...(await readAudit(seeded.id))!, order: { ...(await readAudit(seeded.id))!.order, status: "pending" } })
-    await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(created)),
-    })
-    expect((await download(seeded.id)).status).toBe(200)
-    const refunded = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify({
-        id: "WH-REFUND",
-        event_type: "PAYMENT.CAPTURE.REFUNDED",
-        resource: {
-          id: "REFUND1",
-          custom_id: seeded.id,
-          links: [{ rel: "up", href: "https://api.sandbox.paypal.com/v2/payments/captures/CAP123" }],
-        },
-      }),
-    })
-    expect(refunded.body.fulfilled).toBe(false)
-    expect((await readAudit(seeded.id))?.order.status).toBe("refunded")
     expect((await download(seeded.id)).status).toBe(403)
-    const replayed = await applyPayPalWebhook({
-      headers: signedHeaders(),
-      rawBody: JSON.stringify(completedEvent(created)),
-    })
-    expect(replayed.body.fulfilled).toBe(false)
-    expect((await readAudit(seeded.id))?.order.status).toBe("refunded")
   })
 
   it("refuses to take payment when durable storage is missing", async () => {
@@ -356,7 +241,7 @@ describe("PayPal checkout acceptance", () => {
     calls.length = 0
     delete process.env.BLOB_READ_WRITE_TOKEN
     delete process.env.BLOB_STORE_ID
-    await expect(createPayPalCheckout({ id: randomUUID(), origin: "https://prep.example" })).rejects.toThrow(/Paid checkout cannot start/)
+    await expect(createPayPalCheckout({ id: randomUUID(), origin: "https://prep.example" })).rejects.toThrow(/not available/)
     expect(calls).toHaveLength(0)
   })
 
@@ -380,7 +265,7 @@ describe("PayPal checkout acceptance", () => {
     delete process.env.VERCEL_ENV
     process.env.VERCEL = "1"
     process.env.PREP_BASE_PRICE_CENTS = "0"
-    expect(paidCheckoutState()).toBe("coming_soon")
+    expect(paidCheckoutState()).toBe("not_for_sale")
 
     setAuditStoreForTests(null)
     delete process.env.BLOB_READ_WRITE_TOKEN

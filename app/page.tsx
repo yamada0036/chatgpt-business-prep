@@ -1,7 +1,16 @@
+import type { Metadata } from "next"
 import { AuditForm } from "@/components/audit-form"
 import { Disclaimer } from "@/components/disclaimer"
+import { IntendedOffer } from "@/components/intended-offer"
+import { WAFFO_VERIFY_CONTENT, WAFFO_VERIFY_NAME } from "@/lib/legal/public"
 import { DISCLAIMER_SHORT } from "@/lib/official/spec"
 import { showFixtureButtons } from "@/lib/site-mode"
+
+export const metadata: Metadata = {
+  other: {
+    [WAFFO_VERIFY_NAME]: WAFFO_VERIFY_CONTENT,
+  },
+}
 
 export default function Home() {
   return (
@@ -19,9 +28,10 @@ export default function Home() {
         </div>
         <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
           <li>The free page shows a summary and masked samples. It does not download the full CSV or copy the full profile draft.</li>
-          <li>After payment, you submit the prep pack yourself in Business Hub. This tool does not sign in, claim, or verify.</li>
+          <li>You submit any prep materials yourself in Business Hub. This tool does not sign in, claim, or verify.</li>
           <li>Prices, brands, stock, and policies that were not fetched stay blank and are marked as needs input. Nothing is invented.</li>
         </ul>
+        <IntendedOffer />
         <p className="sr-only">{DISCLAIMER_SHORT}</p>
       </section>
       <AuditForm showFixtures={showFixtureButtons()} />

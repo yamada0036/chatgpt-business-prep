@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Disclaimer } from "@/components/disclaimer"
 import type { PublicAudit } from "@/lib/public-view"
+import { RETENTION_FACT } from "@/lib/legal/public"
 import { shanghaiLabel } from "@/lib/time"
 
 const ORDER_LABEL = { pending: "Pending payment", paid: "Paid", delivered: "Delivered", failed: "Failed", refunded: "Refunded" } as const
@@ -71,7 +72,7 @@ export function DeliveryPanel({ id }: { id: string }) {
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Prep pack</h1>
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
-        <p className="text-sm">Order status: {ORDER_LABEL[audit.order.status]}. The crawl and the prep pack are kept for {audit.retentionDays} days, deleted at {audit.expiresAt}, and are not stored forever.</p>
+        <p className="text-sm">Order status: {ORDER_LABEL[audit.order.status]}. This audit expires at {audit.expiresAt}. {RETENTION_FACT}</p>
         {audit.skuCapNote ? <p className="text-sm">{audit.skuCapNote}</p> : null}
         <Disclaimer compact />
       </div>
