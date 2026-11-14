@@ -37,7 +37,7 @@ export function termsSections(offer: PublicOffer = getPublicOffer()): LegalSecti
       ],
     },
     {
-      heading: "The free trial",
+      heading: "The trial",
       paragraphs: [
         offer.freeTrial,
         "One trial is stored for a normalized store URL and for an email string. A second audit of the same store, or the same email on another store, does not start another trial. The email is not verified, so a different email string is a different record. Different domain names are different stores. Opening someone else's audit link does not transfer the trial.",
@@ -50,7 +50,7 @@ export function termsSections(offer: PublicOffer = getPublicOffer()): LegalSecti
         "The site refuses a submission it can already check: a URL that is not public http or https, a URL that contains a username or password, a URL that points at a private or local address, a file over the upload limit or that is not a readable CSV or XLSX sheet, and a contact email that is not a valid address format.",
         "There is no user account, so there is nothing to suspend. If a submission breaks these rules, or if the operator finds that the submitter was not allowed to use the store URL or the file, the operator may remove that audit record and its prep files from this site's storage. The operator may also refuse a later submission when the operator can match it to the same store URL or email. That refusal is limited to this site and to the submission the operator can match. The site has no automatic block list.",
         "The operator may stop providing this tool for that submission. Stopping it means the audit is no longer kept in this site's store, either because the operator removes it or because a later read after the expiry time removes it. This page does not promise how soon that happens. Removing the audit does not delete Vercel function logs or Vercel Web Analytics events. A trial slot for that store or email can remain. The slot only records that a trial was already used.",
-        "These are the steps this site can take. They do not replace a consequence that applicable law already provides, and this page does not name a governing law. Paid checkout is not available. This section does not add a charge or a refund rule.",
+        "These are the steps this site can take. They do not replace a consequence that applicable law already provides, and this page does not name a governing law. Paid checkout is not available.",
       ],
     },
     {
@@ -111,6 +111,7 @@ export function privacySections(offer: PublicOffer = getPublicOffer()): LegalSec
       paragraphs: [
         "Paid checkout is not available. The site does not create a PayPal order and does not accept a card payment. No payment processor is charging the intended subscription.",
         offer.intended,
+        offer.termsGate,
       ],
     },
     {

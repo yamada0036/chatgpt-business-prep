@@ -21,17 +21,31 @@ const pages = ["app/page.tsx", "app/terms/page.tsx", "app/privacy/page.tsx", "ap
 describe("public legal copy", () => {
   it("states the intended subscription as not for sale and omits undecided commercial rules", () => {
     process.env.PREP_TRIAL_DAYS = "7"
-    process.env.PREP_TRIAL_PRICE_CENTS = "0"
+    process.env.PREP_TRIAL_PRICE_CENTS = "990"
     process.env.PREP_MONTHLY_PRICE_CENTS = "4990"
     process.env.PREP_CURRENCY = "USD"
     const offer = getPublicOffer()
-    const text = [offer.notForSale, offer.intended, offer.termsGate, ...termsSections(offer).flatMap((section) => section.paragraphs), ...privacySections(offer).flatMap((section) => section.paragraphs)].join("\n")
-    expect(text).toContain(offer.trialPriceLabel)
-    expect(text).toContain(`${offer.trialDays}-day`)
-    expect(text).toContain(offer.monthlyPriceLabel)
-    expect(text).toContain("not being charged")
+    const text = [offer.notForSale, offer.intended, offer.termsGate, offer.intro, offer.footnote, offer.freeTrial, ...offer.plans.flatMap((plan) => plan.features), ...termsSections(offer).flatMap((section) => section.paragraphs), ...privacySections(offer).flatMap((section) => section.paragraphs)].join("\n")
+    expect(offer.trialPriceCents).toBe(990)
+    expect(offer.monthlyPriceCents).toBe(4990)
+    expect(offer.paidAvailable).toBe(false)
+    expect(offer.trialCanStart).toBe(false)
+    expect(text).toContain("USD 9.90")
+    expect(text).toContain("USD 49.90")
+    expect(text).toContain("within 7 days after each charge")
+    expect(text).toContain("USD 9.90 trial fee and each USD 49.90 monthly fee")
+    expect(text).toContain("renews automatically unless you cancel")
+    expect(text).toContain("Cancellation stops the next renewal")
+    expect(text).toContain("until the end of that paid period")
+    expect(text).toContain("applicable law already gives you is unaffected")
     expect(text).toContain(SUPPORT_EMAIL)
+    expect(text).toContain("not being charged")
     expect(text).toContain(RETENTION_FACT)
+    const billing = [offer.notForSale, offer.intended, offer.termsGate, offer.intro, offer.footnote, offer.freeTrial, ...offer.plans.flatMap((plan) => plan.features)].join("\n")
+    expect(billing).not.toMatch(/payment provider|no refund button|no cancellation button|no automatic refund|does not name that law|how soon a request/i)
+    expect(text).not.toMatch(/whether any fee is refundable are not decided/)
+    expect(text).not.toMatch(/This section does not add a charge or a refund rule/)
+    expect(text).not.toMatch(/payment provider will approve/i)
     expect(text).not.toMatch(/GetPraxora|TBD|lorem|cancel anytime|no refunds|Waffo checkout/i)
     expect(text).not.toMatch(/\$49 one-time|USD 49\.00/)
     expect(text).not.toMatch(/deleted after 30 days/i)

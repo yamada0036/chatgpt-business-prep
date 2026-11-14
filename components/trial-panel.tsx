@@ -23,7 +23,7 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Free trial active — {audit.trialDaysLeft} day{audit.trialDaysLeft === 1 ? "" : "s"} left</CardTitle>
+          <CardTitle>Trial access — {audit.trialDaysLeft} day{audit.trialDaysLeft === 1 ? "" : "s"} left</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm leading-6">
           <p>
@@ -31,9 +31,7 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
             {shanghaiLabel(new Date(audit.trial.endsAt))}. Charged so far: {audit.offer.trialPriceLabel}.
           </p>
           <p>
-            When the trial ends the prep pack locks again and nothing is charged. Pro after the trial is{" "}
-            {audit.offer.monthlyPriceLabel} / month, and paid monthly billing is not for sale yet. A paid month only
-            starts if you explicitly start it afterwards.
+            When this access ends, the prep pack locks. {audit.offer.intended}
           </p>
           <Button asChild>
             <a href={`/audit/${id}/delivery`}>Go to delivery</a>
@@ -47,15 +45,15 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{audit.trialStatus === "cancelled" ? "Free trial cancelled" : "Free trial ended"}</CardTitle>
+          <CardTitle>{audit.trialStatus === "cancelled" ? "Trial cancelled" : "Trial ended"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm leading-6">
           <p>
             {audit.trialStatus === "cancelled"
               ? "This trial was cancelled or the order was refunded. Nothing further is charged."
-              : `Your ${audit.offer.trialDays}-day free trial ended on ${audit.trial ? shanghaiLabel(new Date(audit.trial.endsAt)) : ""}. Nothing was charged.`}
+              : `This ${audit.offer.trialDays}-day access ended on ${audit.trial ? shanghaiLabel(new Date(audit.trial.endsAt)) : ""}. The prep pack is locked.`}
           </p>
-          <p>The trial cannot be restarted on this audit. Paid monthly billing after the trial is not for sale yet. Pro would be {audit.offer.monthlyPriceLabel} / month.</p>
+          <p>The trial cannot be restarted on this audit. {audit.offer.freeTrial}</p>
         </CardContent>
       </Card>
     )
@@ -82,13 +80,12 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Free trial — {audit.offer.trialDays} days, {audit.offer.trialPriceLabel}</CardTitle>
+        <CardTitle>{audit.offer.trialDays}-day trial — {audit.offer.trialPriceLabel}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-6">
         <p>{audit.offer.freeTrial}</p>
         <p>
-          After the trial, Pro is {audit.offer.monthlyPriceLabel} / month. Paid monthly billing is not for sale yet, and
-          nothing is charged automatically. The download works in the browser that created this audit.
+          {audit.offer.termsGate}
         </p>
         <div className="space-y-2">
           <Label htmlFor="trial_email">Contact email (required to start the trial)</Label>
@@ -104,7 +101,7 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
         </div>
         {error ? <p className="text-destructive">{error}</p> : null}
         <Button className="h-11" disabled={pending || !audit.offer.trialCanStart} onClick={start}>
-          Start {audit.offer.trialDays}-day free trial
+          {audit.offer.trialCanStart ? `Start ${audit.offer.trialDays}-day access` : "Paid checkout is not available yet"}
         </Button>
       </CardContent>
     </Card>

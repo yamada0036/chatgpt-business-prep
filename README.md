@@ -24,9 +24,9 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PREP_TRIAL_DAYS` | `7` | Free trial length in days. |
-| `PREP_TRIAL_PRICE_CENTS` | `0` | Trial price in cents. `0` = free trial, no charge. |
-| `PREP_MONTHLY_PRICE_CENTS` | `4990` | Pro price after the trial, in cents. `$49.90` USD / month. Not auto-charged — see below. |
+| `PREP_TRIAL_DAYS` | `7` | Published trial length in days. |
+| `PREP_TRIAL_PRICE_CENTS` | `990` | Published trial price in cents. USD 9.90. Not charged while checkout is off. |
+| `PREP_MONTHLY_PRICE_CENTS` | `4990` | Published price after the trial, in cents. USD 49.90 / month, renewing unless canceled. Not charged while checkout is off. |
 | `PREP_BASE_PRICE_CENTS` | `0` | Old one-time pack price. `0` while paid checkout is off. |
 | `PREP_CURRENCY` | `USD` | ISO currency shown next to the amount and sent to PayPal. |
 | `PREP_INCLUDED_SKUS` | `50` | Product rows included in the paid pack. |
@@ -52,19 +52,19 @@ Prices, SKU allowance, crawl caps, retention, PayPal, and storage are environmen
 
 Official field names, availability enums, excluded Ads/Checkout columns, claim steps, and the legal sentences live in `lib/official/spec.ts`. Update that module when OpenAI's docs change. The checkout amount is computed in `lib/pricing.ts` and stored on the order. PayPal is created with that same `amountCents` and currency. The webhook accepts the capture only when the amount and currency still match.
 
-## Pricing — Free vs Pro, 7-day free trial
+## Pricing — 7-day trial, then a monthly fee
 
-Like ChatGPT's Free vs Plus page (`/pricing`): one product in two stages. **Free — 7-day free trial for USD 0.00**, full prep pack for 7 days, no card, nothing charged. **Pro — USD 49.90 / month** after the trial, only if the merchant explicitly continues. The free audit summary on the homepage stays free to run; it is what the trial starts from.
+The published price is a **7-day trial for USD 9.90**, then **USD 49.90 / month**, renewing automatically unless the customer cancels by email to the support address. A refund of either fee may be requested within 7 days after that charge. **Paid checkout is off, so the site does not charge either amount and does not run a renewal.** The free audit summary on the homepage stays free to run. It is not the paid trial.
 
-- Trial: `POST /api/audits/:id/trial` with the owner cookie set when the audit was created (`HttpOnly`, not an email verification). A blank `contact_email` keeps the address already stored on the audit. No card, no PayPal order, no charge during the trial. Code: `lib/offer.ts` (server prices), `lib/subscription.ts` (trial state), `lib/audit/checkout.ts` (`startFreeTrial`), `components/trial-panel.tsx`, `components/pricing-cards.tsx`.
+- Trial: `POST /api/audits/:id/trial` with the owner cookie set when the audit was created (`HttpOnly`, not an email verification). A blank `contact_email` keeps the address already stored on the audit. The route does not create a PayPal order. While the published trial price is not zero and checkout is off, the route refuses to start and charges nothing. Code: `lib/offer.ts` (server prices), `lib/subscription.ts` (trial state), `lib/audit/checkout.ts` (`startFreeTrial`), `components/trial-panel.tsx`, `components/pricing-cards.tsx`.
 - The browser that creates the audit is the only one that can start the trial or download the pack. A shared audit link still shows the free summary. Audits created before this cookie have no owner hash: they cannot start a trial or download, and the server does not mint a replacement credential for whoever opens the link. Start a new audit in this browser. Losing the cookie means the same thing: the summary remains, the pack does not.
 - One trial per audit. A second slot is stored for the normalized store URL (`www`, trailing slash, and tracking parameters folded together) and for the email string. Those slots survive the 30-day audit retention. An expired trial cannot be restarted on the same audit, the same normalized store, or the same email string.
 - Remaining limits: the email is not verified, so a different email string is a different slot. A different domain is a different store. The first owner who starts a trial for a store consumes that store's slot, including someone who audits a public URL they do not operate. There is no admin reset in this version.
-- After the trial, a paid month only starts if the merchant explicitly starts it. **This code does not auto-charge.** PayPal Subscriptions (plan + `BILLING.SUBSCRIPTION.*` webhooks) is not wired up yet — the current PayPal code is one-time Orders only, and paid checkout stays off. `PREP_MONTHLY_PRICE_CENTS` is the price shown for that future month. It is not sent to PayPal.
+- The published monthly fee renews automatically unless the customer cancels. **This code does not charge it and does not run that renewal.** PayPal Subscriptions is not wired up. `PREP_MONTHLY_PRICE_CENTS` is the published price. It is not sent to PayPal.
 
 ## PayPal Checkout
 
-Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the USD 49.90 monthly price. The old USD 9.90 paid trial is gone — the trial is now free (USD 0.00). The webhook route still exists and does not fulfill an order while checkout is off.
+Paid checkout is turned off. The site does not create a PayPal order, does not run the earlier USD 49 one-time charge, and does not charge the USD 9.90 trial fee or the USD 49.90 monthly fee. The webhook route still exists and does not fulfill an order while checkout is off.
 
 The buyer pays on PayPal. This site does not render a card form and does not collect card numbers, bank details, or a PayPal password.
 
@@ -82,7 +82,7 @@ A catalog with more than `PREP_INCLUDED_SKUS` rows (default 50) does not add an 
 4. Run the app on a URL PayPal can reach. For local sandbox, expose it with a tunnel and set `PREP_PUBLIC_URL` to that origin.
 5. In the sandbox app, add a webhook. The URL to register is `https://<your-domain>/api/paypal/webhook`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.REFUNDED`, and `PAYMENT.CAPTURE.REVERSED`.
 6. Copy the webhook id into `PAYPAL_WEBHOOK_ID`.
-7. Do not expect a sandbox payment to succeed. The PayPal route returns 403 and no order is created. The free trial is the path that unlocks a pack, and only in the browser that created the audit.
+7. Do not expect a sandbox payment to succeed. The PayPal route returns 403 and no order is created. The published USD 9.90 trial also does not start while checkout is off.
 8. Opening the return URL, or calling the capture route, does not unlock the download. The webhook route answers `checkout_disabled` and does not fulfill.
 
 ### Live

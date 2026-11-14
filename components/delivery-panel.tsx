@@ -40,8 +40,8 @@ export function DeliveryPanel({ id }: { id: string }) {
           {audit.order.status === "refunded" || audit.trialStatus === "cancelled"
             ? "This access was refunded or cancelled. The prep pack is not available for download."
             : audit.trialStatus === "expired"
-              ? `Your ${audit.offer.trialDays}-day free trial ended. Nothing was charged. The prep pack is locked again.`
-              : `The full prep pack downloads during a ${audit.offer.trialDays}-day free trial (${audit.offer.trialPriceLabel}, no card) in the browser that created the audit, or after a verified payment. Paid monthly billing is not for sale yet.`}
+              ? `This ${audit.offer.trialDays}-day access ended. The prep pack is locked.`
+              : audit.offer.freeTrial}
         </p>
         <Button asChild><Link href={`/audit/${id}/checkout`}>Go to payment</Link></Button>
       </div>
@@ -76,7 +76,7 @@ export function DeliveryPanel({ id }: { id: string }) {
         <p className="text-sm text-muted-foreground break-all">{audit.storeUrl}</p>
         <p className="text-sm">
           {audit.trialStatus === "active"
-            ? `Free trial — ${audit.trialDaysLeft} day${audit.trialDaysLeft === 1 ? "" : "s"} left. Charged: ${audit.offer.trialPriceLabel}. Pro later would be ${audit.offer.monthlyPriceLabel} / month, and it is not for sale yet.`
+            ? `Trial access — ${audit.trialDaysLeft} day${audit.trialDaysLeft === 1 ? "" : "s"} left. ${audit.offer.freeTrial}`
             : `Order status: ${ORDER_LABEL[audit.order.status]}.`}
           {" "}This audit expires at {audit.expiresAt}. {RETENTION_FACT}
         </p>

@@ -12,8 +12,7 @@ import type { Plan } from "@/lib/plan"
 
 /**
  * ChatGPT-style pricing: Free vs Pro, side by side, same product in two
- * stages — Free is the 7-day free trial (USD 0.00), Pro is USD 49.90 /
- * month after the trial. Both cards carry the same number of features
+ * stages. Prices come from the server offer. Both cards carry the same number of features
  * and their buttons sit at the same height, so neither card looks empty.
  *
  * Starting a trial needs a finished audit, so without an `auditId` both
@@ -75,7 +74,7 @@ export function PricingCards({
               </div>
               <p className="text-2xl font-semibold tracking-tight">{plan.headline}</p>
               <p className="text-sm text-muted-foreground">
-                {plan.id === "free" ? plan.features[2] : "The full prep pack, ready to submit yourself. Monthly billing is not for sale yet."}
+                {plan.id === "free" ? plan.features[2] : "The full prep pack, ready to submit yourself. Paid checkout is not available yet."}
               </p>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col space-y-4">
@@ -95,7 +94,7 @@ export function PricingCards({
                       <Link href={`/audit/${auditId}/delivery`}>{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Paid monthly billing is not for sale yet. Start with the free trial first.
+                      Paid checkout is not available yet. Nothing is being charged.
                     </p>
                   </>
                 ) : plan.id === "pro" ? (
@@ -104,12 +103,12 @@ export function PricingCards({
                       <Link href="/">{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Start with the 7-day free trial first — run a free audit, then continue.
+                      Run a free audit first. Paid checkout is not available yet.
                     </p>
                   </>
                 ) : auditId ? (
                   <>
-                    <Label htmlFor="trial_email">Contact email (to start the free trial)</Label>
+                    <Label htmlFor="trial_email">Contact email (to start trial access)</Label>
                     <Input
                       id="trial_email"
                       type="email"
@@ -124,8 +123,8 @@ export function PricingCards({
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       {trialCanStart
-                        ? "No card required. Nothing is charged during the trial. If you do nothing, the trial ends and nothing is charged. The download stays in the browser that created the audit."
-                        : "This trial price is not zero, and paid checkout is not available, so the trial cannot start."}
+                        ? "No card required. Nothing is charged during this no-charge access. The download stays in the browser that created the audit."
+                        : "Paid checkout is not available yet. Nothing is being charged."}
                     </p>
                   </>
                 ) : (
@@ -134,7 +133,7 @@ export function PricingCards({
                       <Link href="/">{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Run a free audit first — the trial starts from your audit.
+                      Run a free audit first. Paid checkout is not available yet.
                     </p>
                   </>
                 )}
