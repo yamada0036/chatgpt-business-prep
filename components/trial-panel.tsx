@@ -101,7 +101,7 @@ export function TrialPanel({ id, audit }: { id: string; audit: PublicAudit }) {
         </div>
         {error ? <p className="text-destructive">{error}</p> : null}
         <Button className="h-11" disabled={pending || !audit.offer.trialCanStart} onClick={start}>
-          {audit.offer.trialCanStart ? `Start ${audit.offer.trialDays}-day access` : "Paid trial cannot start yet"}
+          {audit.offer.trialCanStart ? `Start ${audit.offer.trialDays}-day access` : "Paid checkout is not available yet"}
         </Button>
       </CardContent>
     </Card>

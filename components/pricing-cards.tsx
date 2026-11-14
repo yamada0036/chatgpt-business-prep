@@ -94,7 +94,7 @@ export function PricingCards({
                       <Link href={`/audit/${auditId}/delivery`}>{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Paid checkout is not available yet. This does not start a charge or a renewal.
+                      Paid checkout is not available yet. Nothing is being charged.
                     </p>
                   </>
                 ) : plan.id === "pro" ? (
@@ -103,7 +103,7 @@ export function PricingCards({
                       <Link href="/">{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Run a free audit first. The paid plan cannot be purchased while checkout is off.
+                      Run a free audit first. Paid checkout is not available yet.
                     </p>
                   </>
                 ) : auditId ? (
@@ -124,7 +124,7 @@ export function PricingCards({
                     <p className="text-xs text-muted-foreground">
                       {trialCanStart
                         ? "No card required. Nothing is charged during this no-charge access. The download stays in the browser that created the audit."
-                        : "This price is not being charged. Paid checkout is off, so the trial cannot start."}
+                        : "Paid checkout is not available yet. Nothing is being charged."}
                     </p>
                   </>
                 ) : (
@@ -133,7 +133,7 @@ export function PricingCards({
                       <Link href="/">{plan.cta}</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Run a free audit first. The paid trial cannot start while checkout is off.
+                      Run a free audit first. Paid checkout is not available yet.
                     </p>
                   </>
                 )}
