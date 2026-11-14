@@ -37,6 +37,23 @@ describe("public legal copy", () => {
     expect(text).not.toMatch(/deleted after 30 days/i)
   })
 
+  it("explains misuse consequences and information requests without new promises", () => {
+    const offer = getPublicOffer()
+    const terms = termsSections(offer)
+    const privacy = privacySections(offer)
+    const misuse = terms.find((section) => section.heading === "If a submission breaks these rules")
+    const requests = privacy.find((section) => section.heading === "Requests about your information")
+    expect(misuse?.paragraphs.join("\n")).toMatch(/no user account/i)
+    expect(misuse?.paragraphs.join("\n")).toMatch(/no automatic block list/i)
+    expect(misuse?.paragraphs.join("\n")).not.toContain(SUPPORT_EMAIL)
+    expect(requests?.paragraphs.join("\n")).toContain(SUPPORT_EMAIL)
+    expect(requests?.paragraphs.join("\n")).toMatch(/audit id/)
+    expect(requests?.paragraphs.join("\n")).toMatch(/no delete button/i)
+    const added = `${misuse?.paragraphs.join("\n")}\n${requests?.paragraphs.join("\n")}`
+    expect(added).not.toMatch(/GDPR|PIPL|governing law is|account suspension|deleted after 30 days|no refunds|GetPraxora/i)
+    expect(WAFFO_VERIFY_CONTENT).toBe("6501fadcd89117d73a42661b07884e88")
+  })
+
   it("puts the exact Waffo ownership meta on the homepage and links the legal pages", async () => {
     const home = await readFile(path.join(process.cwd(), "app/page.tsx"), "utf8")
     const shell = await readFile(path.join(process.cwd(), "components/site-shell.tsx"), "utf8")

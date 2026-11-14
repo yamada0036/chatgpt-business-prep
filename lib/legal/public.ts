@@ -3,7 +3,7 @@ export const WAFFO_VERIFY_NAME = "waffo-verify"
 export const WAFFO_VERIFY_CONTENT = "6501fadcd89117d73a42661b07884e88"
 
 export const SUPPORT_EMAIL = "praxora-ai@mail.grokbot.com"
-export const LEGAL_UPDATED = "13 November 2026"
+export const LEGAL_UPDATED = "14 November 2026"
 
 /**
  * Matches the read path in lib/store. There is no separate deletion clock.
