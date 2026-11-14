@@ -51,6 +51,25 @@ describe("public legal copy", () => {
     expect(text).not.toMatch(/deleted after 30 days/i)
   })
 
+  it("keeps the free audit separate from the unpaid 7-day trial", async () => {
+    process.env.PREP_TRIAL_DAYS = "7"
+    process.env.PREP_TRIAL_PRICE_CENTS = "990"
+    process.env.PREP_MONTHLY_PRICE_CENTS = "4990"
+    process.env.PREP_CURRENCY = "USD"
+    const offer = getPublicOffer()
+    const legal = [...termsSections(offer).flatMap((section) => section.paragraphs), ...privacySections(offer).flatMap((section) => section.paragraphs), RETENTION_FACT].join("\n")
+    const cards = await readFile(path.join(process.cwd(), "components/pricing-cards.tsx"), "utf8")
+    const home = await readFile(path.join(process.cwd(), "components/audit-form.tsx"), "utf8")
+    expect(legal).not.toMatch(/authorizes the free trial|While the free trial allows it|trial slot/i)
+    expect(legal).toContain("does not start the 7-day trial")
+    expect(legal).toContain("free audit does not include the prep-pack download")
+    expect(offer.plans.map((plan) => plan.cta)).not.toContain("Start 7-day trial")
+    expect(offer.plans.map((plan) => plan.cta)).not.toContain("Continue with Pro")
+    expect(cards).toContain(">Start free audit</Link>")
+    expect(cards).not.toContain('<Link href="/">{plan.cta}</Link>')
+    expect(home).toContain("Start free audit")
+  })
+
   it("explains misuse consequences and information requests without new promises", () => {
     const offer = getPublicOffer()
     const terms = termsSections(offer)
