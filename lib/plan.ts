@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from "@/lib/legal/public"
 import type { TrialTerms } from "@/lib/subscription"
 
 /** Serializable plan card. Safe to pass from a Server Component into a Client Component. */
@@ -32,34 +33,52 @@ export type PublicOffer = TrialTerms & {
   plans: Plan[]
 }
 
+export type BillingSentences = {
+  notForSale: string
+  intended: string
+  termsGate: string
+  freeTrial: string
+  intro: string
+  footnote: string
+}
+
+/** Published price and refund rules. Checkout being off is stated separately inside these sentences. */
+export function billingSentences(input: {
+  days: number
+  trialPriceLabel: string
+  monthlyPriceLabel: string
+  currency: string
+}): BillingSentences {
+  const { days, trialPriceLabel, monthlyPriceLabel, currency } = input
+  return {
+    notForSale:
+      "Paid checkout is not available yet. This site does not charge a subscription and does not charge the earlier one-time pack. The trial fee and the monthly fee are not being charged.",
+    intended: `The published price is a ${days}-day trial for ${trialPriceLabel}, then ${monthlyPriceLabel} per month. Amounts are in ${currency}. After the trial, the monthly fee renews automatically unless you cancel. Because paid checkout is not available, that charge and that renewal do not run on this site today.`,
+    termsGate: `You may request a refund within 7 days after each charge. That request covers the ${trialPriceLabel} trial fee and each ${monthlyPriceLabel} monthly fee. Email ${SUPPORT_EMAIL}. There is no refund button and no automatic refund. This page does not promise how soon a request is handled, and it does not promise that a payment provider will approve it. To cancel, email ${SUPPORT_EMAIL}. There is no cancellation button. Cancellation stops the next renewal. It does not by itself refund a charge already made. If a charge is not refunded, paid access continues until the end of that paid period. A refund right that applicable law already gives you is unaffected. This page does not name that law.`,
+    freeTrial: `The ${days}-day trial is ${trialPriceLabel}, then ${monthlyPriceLabel} per month. The monthly fee renews automatically unless you cancel. Paid checkout is not available, so this site does not collect that trial fee or start that renewal.`,
+    intro: `A ${days}-day trial is ${trialPriceLabel}, then ${monthlyPriceLabel} per month. The monthly fee renews automatically unless you cancel. Paid checkout is not available, so nothing is being charged.`,
+    footnote: `A refund may be requested within 7 days after each charge, for the ${trialPriceLabel} trial fee and for each ${monthlyPriceLabel} monthly fee. Cancel by emailing ${SUPPORT_EMAIL}. Cancellation stops the next renewal. Paid checkout is not available yet.`,
+  }
+}
+
 /** Defaults used only when a caller does not pass a server offer. Routes pass `getPublicOffer()`. */
 export function documentedOffer(): PublicOffer {
-  const trialPriceLabel = "USD 0.00"
+  const trialPriceLabel = "USD 9.90"
   const monthlyPriceLabel = "USD 49.90"
   const days = 7
   const included = 50
-  const notForSale =
-    "Paid checkout is not available yet. This site does not charge a subscription and does not charge the earlier one-time pack. The paid month after the free trial is not being charged."
-  const intended = `The price is a ${days}-day free trial for ${trialPriceLabel}, then ${monthlyPriceLabel} per month. Amounts are in USD. The trial is free: no card is required to start it and nothing is charged during the ${days} days. If you do nothing, the trial ends, the prep pack locks again, and nothing is charged. A paid month only starts if you explicitly start it after the trial.`
-  const termsGate =
-    "Paid monthly billing after the trial is not for sale yet. It will not start until the subscription terms are published and PayPal Subscriptions is wired up, because what a paid period includes, when a later charge would happen, how someone would cancel, and whether any fee is refundable are not decided. The free trial itself does not create a paid subscription."
-  const freeTrial = `Free trial: ${days} days, ${trialPriceLabel}. Start with the browser that created the audit — no card, no PayPal payment during the trial. The full prep pack is downloadable during the trial in that browser. When the trial ends, access ends and no charge is made.`
+  const copy = billingSentences({ days, trialPriceLabel, monthlyPriceLabel, currency: "USD" })
   return {
     trialDays: days,
-    trialPriceCents: 0,
+    trialPriceCents: 990,
     monthlyPriceCents: 4990,
     currency: "USD",
     trialPriceLabel,
     monthlyPriceLabel,
     includedSkus: included,
-    trialCanStart: true,
+    trialCanStart: false,
     paidAvailable: false,
-    intro: `Try the full prep pack free for ${days} days — ${trialPriceLabel}, no card, no charge. After that, Pro is ${monthlyPriceLabel} / month, only if you choose to continue. Paid monthly billing is not for sale yet.`,
-    footnote: `Free is ${days} days only. After the trial, Pro is ${monthlyPriceLabel} / month — only if you explicitly start the paid subscription. Paid monthly billing is not for sale yet.`,
-    notForSale,
-    intended,
-    termsGate,
-    freeTrial,
+    ...copy,
     plans: [],
   }
 }

@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const offer = getPublicOffer()
   return {
     title: "Pricing · Prep",
-    description: `Free audit, or Pro with a ${offer.trialDays}-day free trial (${offer.trialPriceLabel}, no card), then ${offer.monthlyPriceLabel} per month.`,
+    description: `Free audit. Published price: a ${offer.trialDays}-day trial for ${offer.trialPriceLabel}, then ${offer.monthlyPriceLabel} per month. Paid checkout is not available yet.`,
   }
 }
 

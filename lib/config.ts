@@ -51,11 +51,10 @@ export function getConfig(): AppConfig {
   return {
     basePriceCents,
     priceEnvSet: Boolean(process.env.PREP_BASE_PRICE_CENTS?.trim()),
-    // Free trial: 7 days, USD 0.00 during the trial, then USD 49.90 / month.
-    // PREP_MONTHLY_PRICE_CENTS is the price after the trial; it is not
-    // charged automatically — see lib/subscription.ts.
+    // Published price: 7 days at USD 9.90, then USD 49.90 / month.
+    // Paid checkout is off, so a non-zero trial price cannot be started or charged.
     trialDays: Math.max(1, envInt("PREP_TRIAL_DAYS", 7)),
-    trialPriceCents: Math.max(0, envInt("PREP_TRIAL_PRICE_CENTS", 0)),
+    trialPriceCents: Math.max(0, envInt("PREP_TRIAL_PRICE_CENTS", 990)),
     monthlyPriceCents: Math.max(0, envInt("PREP_MONTHLY_PRICE_CENTS", 4990)),
     currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD",
     includedSkus: Math.max(0, envInt("PREP_INCLUDED_SKUS", 50)),

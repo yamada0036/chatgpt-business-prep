@@ -1,5 +1,5 @@
 import { getConfig } from "@/lib/config"
-import type { Plan, PublicOffer } from "@/lib/plan"
+import { billingSentences, type Plan, type PublicOffer } from "@/lib/plan"
 import { formatCents } from "@/lib/pricing"
 
 /**
@@ -16,30 +16,40 @@ export function getPublicOffer(): PublicOffer {
   const monthlyPriceLabel = formatCents(config.monthlyPriceCents, config.currency)
   const days = config.trialDays
   const included = config.includedSkus
-  const notForSale =
-    "Paid checkout is not available yet. This site does not charge a subscription and does not charge the earlier one-time pack. The paid month after the free trial is not being charged."
-  const intended = `The price is a ${days}-day free trial for ${trialPriceLabel}, then ${monthlyPriceLabel} per month. Amounts are in ${config.currency}. The trial is free: no card is required to start it and nothing is charged during the ${days} days. If you do nothing, the trial ends, the prep pack locks again, and nothing is charged. A paid month only starts if you explicitly start it after the trial.`
-  const termsGate =
-    "Paid monthly billing after the trial is not for sale yet. It will not start until the subscription terms are published and PayPal Subscriptions is wired up, because what a paid period includes, when a later charge would happen, how someone would cancel, and whether any fee is refundable are not decided. The free trial itself does not create a paid subscription."
-  const freeTrial = `Free trial: ${days} days, ${trialPriceLabel}. Start with the browser that created the audit — no card, no PayPal payment during the trial. The full prep pack is downloadable during the trial in that browser. When the trial ends, access ends and no charge is made.`
+  const copy = billingSentences({
+    days,
+    trialPriceLabel,
+    monthlyPriceLabel,
+    currency: config.currency,
+  })
   const plans: Plan[] = [
     {
       id: "free",
-      name: "Free",
-      headline: "Free trial",
+      name: config.trialPriceCents === 0 ? "Free" : "Trial",
+      headline: config.trialPriceCents === 0 ? "Free trial" : `${days}-day trial`,
       priceLabel: trialPriceLabel,
       priceCents: config.trialPriceCents,
       currency: config.currency,
       period: ` / ${days} days`,
-      cta: `Start ${days}-day free trial`,
-      features: [
-        `${days}-day free trial — ${trialPriceLabel} during the trial`,
-        "No card required to start the trial, no charge during the trial",
-        `Full prep pack for ${days} days: readme, claim checklist, profile draft, product-feed CSV + issues file`,
-        "Free audit summary and readiness score",
-        `First ${included} product rows included`,
-        `Ends after ${days} days — nothing is charged, the pack locks again`,
-      ],
+      cta: config.trialPriceCents === 0 ? `Start ${days}-day free trial` : `Start ${days}-day trial`,
+      features:
+        config.trialPriceCents === 0
+          ? [
+              `${days}-day free trial — ${trialPriceLabel} during the trial`,
+              "No card required to start the trial, no charge during the trial",
+              `Full prep pack for ${days} days: readme, claim checklist, profile draft, product-feed CSV + issues file`,
+              "Free audit summary and readiness score",
+              `First ${included} product rows included`,
+              `Ends after ${days} days — nothing is charged, the pack locks again`,
+            ]
+          : [
+              `${days}-day trial for ${trialPriceLabel}`,
+              `Then ${monthlyPriceLabel} per month, renewing automatically unless you cancel`,
+              `Full prep pack for ${days} days: readme, claim checklist, profile draft, product-feed CSV + issues file`,
+              "Free audit summary and readiness score",
+              `First ${included} product rows included`,
+              "Paid checkout is not available, so this price is not being charged",
+            ],
     },
     {
       id: "pro",
@@ -51,12 +61,14 @@ export function getPublicOffer(): PublicOffer {
       period: "/ month",
       cta: "Continue with Pro",
       features: [
-        "Everything in the free trial, continued",
+        config.trialPriceCents === 0 ? "Everything in the free trial, continued" : "Everything in the trial, continued",
         `Full prep pack every month — no ${days}-day limit`,
         "Agent Q&A pack when that box was checked",
         "Fill missing fields and generate a new pack version",
         `First ${included} product rows included. Larger catalogs are capped in the pack and do not add an SKU charge.`,
-        "Only if you explicitly start it — doing nothing charges nothing. Paid monthly billing is not for sale yet.",
+        config.trialPriceCents === 0
+          ? "Only if you explicitly start it — doing nothing charges nothing. Paid monthly billing is not for sale yet."
+          : `Renews automatically at ${monthlyPriceLabel} per month unless you cancel. Paid checkout is not available, so this is not being charged.`,
       ],
       recommended: true,
     },
@@ -71,12 +83,7 @@ export function getPublicOffer(): PublicOffer {
     includedSkus: included,
     trialCanStart: config.trialPriceCents === 0,
     paidAvailable: false,
-    intro: `Try the full prep pack free for ${days} days — ${trialPriceLabel}, no card, no charge. After that, Pro is ${monthlyPriceLabel} / month, only if you choose to continue. Paid monthly billing is not for sale yet.`,
-    footnote: `Free is ${days} days only. After the trial, Pro is ${monthlyPriceLabel} / month — only if you explicitly start the paid subscription. Paid monthly billing is not for sale yet.`,
-    notForSale,
-    intended,
-    termsGate,
-    freeTrial,
+    ...copy,
     plans,
   }
 }
