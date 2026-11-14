@@ -64,6 +64,8 @@ describe("public legal copy", () => {
     expect(shell).toContain('href="/terms"')
     expect(shell).toContain('href="/privacy"')
     expect(shell).toContain('href="/pricing"')
+    expect(shell).toContain("`mailto:${SUPPORT_EMAIL}`")
+    expect(shell).toContain("`Customer support: ${SUPPORT_EMAIL}`")
     const joined = (await Promise.all(pages.map((file) => readFile(path.join(process.cwd(), file), "utf8")))).join("\n")
     expect(joined).not.toMatch(/GetPraxora/)
   })

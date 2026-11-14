@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Disclaimer } from "@/components/disclaimer"
+import { SUPPORT_EMAIL } from "@/lib/legal/public"
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
@@ -25,6 +26,11 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <Link href="/privacy" className="underline">Privacy</Link>
             <Link href="/pricing" className="underline">Pricing</Link>
           </nav>
+          <p className="text-sm">
+            <a className="underline" href={`mailto:${SUPPORT_EMAIL}`}>
+              {`Customer support: ${SUPPORT_EMAIL}`}
+            </a>
+          </p>
           <Disclaimer />
         </div>
       </footer>
