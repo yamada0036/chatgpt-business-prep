@@ -88,25 +88,14 @@ export function PricingCards({
                 ))}
               </ul>
               <div className="mt-auto space-y-2 pt-2">
-                {plan.id === "pro" && auditId ? (
+                {trialCanStart && plan.id === "pro" && auditId ? (
                   <>
                     <Button className="h-11 w-full" asChild>
                       <Link href={`/audit/${auditId}/delivery`}>{plan.cta}</Link>
                     </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Paid checkout is not available yet. Nothing is being charged.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Paid checkout is not available yet. Nothing is being charged.</p>
                   </>
-                ) : plan.id === "pro" ? (
-                  <>
-                    <Button className="h-11 w-full" asChild>
-                      <Link href="/">{plan.cta}</Link>
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Run a free audit first. Paid checkout is not available yet.
-                    </p>
-                  </>
-                ) : auditId ? (
+                ) : trialCanStart && plan.id !== "pro" && auditId ? (
                   <>
                     <Label htmlFor="trial_email">Contact email (to start trial access)</Label>
                     <Input
@@ -118,23 +107,26 @@ export function PricingCards({
                       placeholder="you@store.example"
                     />
                     {message ? <p className="text-sm text-destructive">{message}</p> : null}
-                    <Button className="h-11 w-full" variant="outline" disabled={pending || !trialCanStart} onClick={startTrial}>
+                    <Button className="h-11 w-full" variant="outline" disabled={pending} onClick={startTrial}>
                       {plan.cta}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      {trialCanStart
-                        ? "No card required. Nothing is charged during this no-charge access. The download stays in the browser that created the audit."
-                        : "Paid checkout is not available yet. Nothing is being charged."}
+                      No card required. Nothing is charged during this no-charge access. The download stays in the browser that created the audit.
                     </p>
+                  </>
+                ) : plan.id !== "pro" && !auditId ? (
+                  <>
+                    <Button variant="outline" className="h-11 w-full" asChild>
+                      <Link href="/">Start free audit</Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground">This opens the free audit. It does not start the 7-day trial.</p>
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" className="h-11 w-full" asChild>
-                      <Link href="/">{plan.cta}</Link>
+                    <Button className="h-11 w-full" disabled>
+                      Paid checkout is not available
                     </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Run a free audit first. Paid checkout is not available yet.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Nothing is being charged.</p>
                   </>
                 )}
               </div>

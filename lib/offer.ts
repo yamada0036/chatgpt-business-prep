@@ -31,7 +31,7 @@ export function getPublicOffer(): PublicOffer {
       priceCents: config.trialPriceCents,
       currency: config.currency,
       period: ` / ${days} days`,
-      cta: config.trialPriceCents === 0 ? `Start ${days}-day free trial` : `Start ${days}-day trial`,
+      cta: config.trialPriceCents === 0 ? `Start ${days}-day free trial` : "Paid checkout is not available",
       features:
         config.trialPriceCents === 0
           ? [
@@ -59,7 +59,7 @@ export function getPublicOffer(): PublicOffer {
       priceCents: config.monthlyPriceCents,
       currency: config.currency,
       period: "/ month",
-      cta: "Continue with Pro",
+      cta: config.trialPriceCents === 0 ? "Continue with Pro" : "Paid checkout is not available",
       features: [
         config.trialPriceCents === 0 ? "Everything in the free trial, continued" : "Everything in the trial, continued",
         `Full prep pack every month — no ${days}-day limit`,
